@@ -1,5 +1,6 @@
 module Validators.UrlEncoded 
-  ( array
+  ( UrlValidation
+  , array
   , boolean
   , int
   , number

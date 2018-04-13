@@ -1,5 +1,6 @@
 module Validators.Json 
   ( JsError
+  , JsValidation
   , array
   , arrayOf
   , elem
