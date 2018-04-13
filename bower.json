@@ -1,0 +1,20 @@
+{
+  "name": "purescript-validators",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^3.2.0",
+    "purescript-console": "^3.0.0",
+    "purescript-polyform": "^0.6.1",
+    "purescript-uri": "git+https://github.com/paluh/purescript-uri",
+    "purescript-argonaut": "^3.1.0",
+    "purescript-numbers": "^5.0.0"
+  },
+  "devDependencies": {
+    "purescript-psci-support": "^3.0.0"
+  }
+}
