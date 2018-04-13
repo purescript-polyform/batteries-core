@@ -16,5 +16,10 @@
   },
   "devDependencies": {
     "purescript-psci-support": "^3.0.0"
+  },
+  "license": "BSD-3",
+  "repository": {                                                           
+    "type": "git",                                                          
+    "url": "https://github.com/lambdaterms/purescript-validators.git"          
   }
 }
