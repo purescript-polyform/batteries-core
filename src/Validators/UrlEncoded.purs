@@ -1,5 +1,6 @@
 module Validators.UrlEncoded 
   ( UrlValidation
+  , UrlError
   , array
   , boolean
   , int
@@ -10,31 +11,38 @@ module Validators.UrlEncoded
 
 import Prelude
 
-import Data.Array (fromFoldable, singleton)
-import Data.Bifunctor (lmap, rmap)
-import Data.Either (Either)
+import Data.Array (fromFoldable)
+import Data.Bifunctor (rmap)
+import Data.Either (Either(..))
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Number as Number
 import Data.StrMap (StrMap)
 import Data.StrMap as StrMap
 import Data.String (toLower)
+import Data.Symbol (SProxy(..))
 import Data.URI (Query(..))
 import Data.URI.Query (parser)
-import Polyform.Validation (V(..), Validation, hoistFnV)
-import Polyform.Validation as V
+import Data.Validator (Errors, Validator, fail)
+import Data.Variant (inj)
+import Polyform.Validation (V(..), hoistFnV)
 import Text.Parsing.StringParser (ParseError(..), runParser)
 
-type UrlValidation m a b = Validation m (Array ParseError) a b
+type UrlValidation m e a b = Validator m (UrlError e) a b
+type UrlError e = (urlError :: ParseError | e)
 type UrlEncoded = StrMap (Array String)
 
-fail :: forall a. String -> V (Array ParseError) a
-fail s = Invalid $ singleton $ ParseError s
+_urlErr :: SProxy "urlError"
+_urlErr = SProxy
 
-fromEither :: forall a. Either ParseError a -> V (Array ParseError) a
-fromEither = lmap singleton >>> V.fromEither
+failure :: forall e a. String -> V (Errors (UrlError e)) a
+failure s = fail $ inj _urlErr $ ParseError s
 
-urlEncoded :: forall m. Monad m => UrlValidation m String UrlEncoded
+fromEither :: forall e a. Either ParseError a -> V (Errors (UrlError e)) a
+fromEither (Left e) = fail $ inj _urlErr e
+fromEither (Right v) = Valid [] v
+
+urlEncoded :: forall m e. Monad m => UrlValidation m e String UrlEncoded
 urlEncoded = hoistFnV \s ->
   (queryToMap <$> (fromEither $ runParser parser ("?" <> s)))
 
@@ -44,28 +52,28 @@ queryToMap (Query q) =
   in StrMap.fromFoldableWith (<>) q'
 
 
-number :: forall m. Monad m => UrlValidation m String Number
+number :: forall m e. Monad m => UrlValidation m e String Number
 number = hoistFnV $ \s -> case Number.fromString s of
   Just n -> pure n
-  Nothing -> fail $ "Could not parse " <> s <> " as number"
+  Nothing -> failure $ "Could not parse " <> s <> " as number"
 
-int :: forall m. Monad m => UrlValidation m String Int
+int :: forall m e. Monad m => UrlValidation m e String Int
 int = hoistFnV $ \s -> case Int.fromString s of
   Just n -> pure n
-  Nothing -> fail $ "Could not parse " <> s <> " as int"
+  Nothing -> failure $ "Could not parse " <> s <> " as int"
 
-boolean :: forall m. Monad m => UrlValidation m String Boolean
+boolean :: forall m e. Monad m => UrlValidation m e String Boolean
 boolean = hoistFnV $ \s -> case toLower s of
   "false" -> pure false
   "true" -> pure true
-  _ -> fail $ "Could not parse " <> s <> " as boolean"
+  _ -> failure $ "Could not parse " <> s <> " as boolean"
 
-single :: forall m. Monad m => String -> UrlValidation m UrlEncoded String
+single :: forall m e. Monad m => String -> UrlValidation m e UrlEncoded String
 single f = hoistFnV $ \q -> case StrMap.lookup f q of
   Just [s] -> pure s
-  _ -> fail $ "Could not find field " <> f
+  _ -> failure $ "Could not find field " <> f
 
-array :: forall m. Monad m => String -> UrlValidation m UrlEncoded (Array String)
+array :: forall m e. Monad m => String -> UrlValidation m e UrlEncoded (Array String)
 array f = hoistFnV $ \q -> case StrMap.lookup f q of
   Just s -> pure s
-  Nothing -> fail $ "Could not find field " <> f
+  Nothing -> failure $ "Could not find field " <> f
