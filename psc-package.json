@@ -1,0 +1,17 @@
+{
+  "name": "purescript-pexels",
+  "set": "df",
+  "source": "https://github.com/paluh/package-sets.git",
+  "depends": [
+    "polyform",
+    "affjax",
+    "console",
+    "eff",
+    "parallel",
+    "prelude",
+    "psci-support",
+    "record-fold",
+    "strings",
+    "these"
+  ]
+}
