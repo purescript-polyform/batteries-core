@@ -30,8 +30,8 @@ affjax
       (AffjaxRequest req)
       (AffjaxResponse res)
 affjax = hoistFnMV $ \req → do
-    (Valid [] <$> Affjax.affjax req) `catchError` handler where
-      handler e = pure (Invalid $ singleton $ (inj (SProxy :: SProxy "remoteError") $ show e))
+  (Valid [] <$> Affjax.affjax req) `catchError` handler where
+    handler e = pure (Invalid $ singleton $ (inj (SProxy :: SProxy "remoteError") $ show e))
 
 status 
   :: forall m err res
