@@ -17,46 +17,46 @@ import Network.HTTP.StatusCode (StatusCode(..))
 import Polyform.Validation (V(Invalid, Valid), Validation, hoistFnMV, hoistFnV)
 import Validators.Json (JsError, object)
 
-
 type HttpErrorRow (err :: # Type) = (wrongHttpStatus :: StatusCode | err)
 type AffjaxErrorRow (err :: # Type) = (remoteError :: String | err)
 
-
-
-
-affjax :: forall req res ext err.
-  Requestable req => Respondable res => Validation
-                                          (Aff ( ajax :: AJAX | ext))
-                                          (Array (Variant (AffjaxErrorRow err)))
-                                          (AffjaxRequest req)
-                                          (AffjaxResponse res)
+affjax 
+  :: forall req res ext err
+   . Requestable req 
+  => Respondable res 
+  => Validation
+      (Aff ( ajax :: AJAX | ext))
+      (Array (Variant (AffjaxErrorRow err)))
+      (AffjaxRequest req)
+      (AffjaxResponse res)
 affjax = hoistFnMV $ \req → do
-    (Valid [] <$> Affjax.affjax req) `catchError` (\e -> pure (Invalid $ singleton $ (inj (SProxy :: SProxy "remoteError") $ show e)))
+    (Valid [] <$> Affjax.affjax req) `catchError` handler where
+      handler e = pure (Invalid $ singleton $ (inj (SProxy :: SProxy "remoteError") $ show e))
 
-
-status :: forall m err res.
-  Monad m => (StatusCode -> Boolean) ->Validation m
-                (Array (Variant (HttpErrorRow err)))
-                (AffjaxResponse res)
-                res
-                
+status 
+  :: forall m err res
+   . Monad m 
+  => (StatusCode -> Boolean) 
+  -> Validation m
+      (Array (Variant (HttpErrorRow err)))
+      (AffjaxResponse res)
+      res         
 status isCorrect = hoistFnV checkStatus where
   checkStatus response =
-      if isCorrect response.status then
-        Valid [] response.response
-      else
-        Invalid $ singleton $ (inj (SProxy :: SProxy "wrongHttpStatus") response.status)
+    if isCorrect response.status then
+      Valid [] response.response
+    else
+      Invalid $ singleton $ (inj (SProxy :: SProxy "wrongHttpStatus") response.status)
         
-
 isStatusOK :: StatusCode -> Boolean
-isStatusOK (StatusCode n) = (n==200)
+isStatusOK (StatusCode n) = (n == 200)
 
-
-jsonFromRequest :: forall ext req err.
-  Requestable req => Validation
-                       (Aff ( ajax :: AJAX | ext))
-                       (Array (Variant(HttpErrorRow (AffjaxErrorRow (JsError err)))))
-                       (AffjaxRequest req)
-                       (StrMap Json)
-
+jsonFromRequest 
+  :: forall ext req err
+   . Requestable req 
+  => Validation
+      (Aff ( ajax :: AJAX | ext))
+      (Array (Variant(HttpErrorRow (AffjaxErrorRow (JsError err)))))
+      (AffjaxRequest req)
+      (StrMap Json)
 jsonFromRequest = object <<< status isStatusOK <<< affjax

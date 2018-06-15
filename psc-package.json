@@ -3,6 +3,10 @@
   "set": "df",
   "source": "https://github.com/paluh/package-sets.git",
   "depends": [
+    "uri",
+    "parsing",
+    "numbers",
+    "argonaut",
     "polyform",
     "affjax",
     "console",
