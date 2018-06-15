@@ -8,14 +8,6 @@
     "numbers",
     "argonaut",
     "polyform",
-    "affjax",
-    "console",
-    "eff",
-    "parallel",
-    "prelude",
-    "psci-support",
-    "record-fold",
-    "strings",
-    "these"
+    "affjax"
   ]
 }
