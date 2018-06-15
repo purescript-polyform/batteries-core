@@ -1,0 +1,13 @@
+{
+  "name": "purescript-polyform-validators",
+  "version": "0.0.1",
+  "devDependencies": {
+    "psc-package": "^0.3.2",
+    "pscid": "^2.5.3",
+    "pulp": "^12.0.1",
+    "purescript": "^0.11.7"
+  },
+  "dependencies": {
+    "xhr2": "^0.1.4"
+  }
+}
