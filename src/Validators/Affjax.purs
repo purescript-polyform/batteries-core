@@ -4,8 +4,9 @@ import Prelude
 
 import Control.Monad.Aff (Aff)
 import Control.Monad.Error.Class (catchError)
-import Data.Argonaut (Json)
+import Data.Argonaut (Json, jsonParser)
 import Data.Array (singleton)
+import Data.Either (Either(..))
 import Data.Functor.Variant (SProxy(..))
 import Data.StrMap (StrMap)
 import Data.Variant (Variant, inj)
@@ -19,6 +20,7 @@ import Validators.Json (JsError, object)
 
 type HttpErrorRow (err :: # Type) = (wrongHttpStatus :: StatusCode | err)
 type AffjaxErrorRow (err :: # Type) = (remoteError :: String | err)
+type JsonErrorRow (err :: # Type) = (parsingError :: String | err)
 
 affjax 
   :: forall req res ext err
@@ -60,3 +62,25 @@ jsonFromRequest
       (AffjaxRequest req)
       (StrMap Json)
 jsonFromRequest = object <<< status isStatusOK <<< affjax
+
+
+valJson 
+  :: forall m err
+   . Monad m 
+  => Validation m
+      (Array (Variant (JsonErrorRow err)))
+      String
+      Json
+valJson = hoistFnV \response -> case jsonParser response of
+  Right js -> Valid [] js
+  Left error -> Invalid  $ singleton (inj (SProxy :: SProxy "parsingError") error)
+
+affjaxJson
+  :: forall eff req errs
+   . Requestable req
+  => Validation
+      (Aff ( ajax :: AJAX | eff))
+      (Array (Variant (HttpErrorRow(AffjaxErrorRow (JsonErrorRow errs)))))
+      (AffjaxRequest req)
+      Json
+affjaxJson = valJson <<< (status isStatusOK) <<< affjax
