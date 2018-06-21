@@ -5,6 +5,7 @@ module Validators.Json
   , arrayOf
   , elem
   , field
+  , number
   , int
   , object
   , optionalField
@@ -58,6 +59,12 @@ int = hoistFnV $ \v ->
   case toNumber v >>= fromNumber of
     Nothing -> failure (jsType v <> " is not an int")
     Just n -> pure n
+
+number :: forall m e. Monad m => JsValidation m e Number
+number = hoistFnV $ \v ->
+  case toNumber v of
+    Nothing -> failure (jsType v <> " is not a number")
+    Just x -> pure x
 
 object :: forall m e. Monad m => Validator m (JsError e) Json (StrMap Json)
 object = hoistFnV $ \v ->
