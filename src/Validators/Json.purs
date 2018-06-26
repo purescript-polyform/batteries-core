@@ -4,6 +4,7 @@ module Validators.Json
   , array
   , arrayOf
   , elem
+  , failure
   , field
   , number
   , int
