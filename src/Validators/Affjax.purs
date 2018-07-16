@@ -7,13 +7,13 @@ import Data.Argonaut (Json, jsonParser)
 import Data.Array (singleton)
 import Data.Either (Either(..))
 import Data.Functor.Variant (SProxy(..))
+import Data.Tuple (Tuple(..))
 import Data.Variant (Variant, inj)
 import Effect.Aff (Aff)
 import Foreign.Object (Object)
 import Network.HTTP.Affjax (AffjaxRequest, AffjaxResponse)
 import Network.HTTP.Affjax (affjax) as Affjax
-import Network.HTTP.Affjax.Request (class Requestable)
-import Network.HTTP.Affjax.Response (class Respondable)
+import Network.HTTP.Affjax.Response (Response, json, string)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Polyform.Validation (V(Invalid, Valid), Validation, hoistFnMV, hoistFnV)
 import Validators.Json (JsError, object)
@@ -23,16 +23,26 @@ type AffjaxErrorRow (err :: # Type) = (remoteError :: String | err)
 type JsonErrorRow (err :: # Type) = (parsingError :: String | err)
 
 affjax
-  :: forall req res ext err
-   . Requestable req
-  => Respondable res
-  => Validation
-      (Aff ( ajax :: AJAX | ext))
+  :: forall a err
+   . Validation
+      Aff
       (Array (Variant (AffjaxErrorRow err)))
-      (AffjaxRequest req)
-      (AffjaxResponse res)
-affjax = hoistFnMV $ \req → do
-  (Valid [] <$> Affjax.affjax req) `catchError` handler where
+      (Tuple (Response a) AffjaxRequest)
+      (AffjaxResponse a)
+affjax = hoistFnMV $ \(Tuple res req) → do
+  (Valid [] <$> Affjax.affjax res req) `catchError` handler where
+    handler e = pure (Invalid $ singleton $ (inj (SProxy :: SProxy "remoteError") $ show e))
+
+affjaxForResponse
+  :: forall a err
+   . (Response a)
+  -> Validation
+      Aff
+      (Array (Variant (AffjaxErrorRow err)))
+      AffjaxRequest
+      (AffjaxResponse a)
+affjaxForResponse res = hoistFnMV $ \req → do
+  (Valid [] <$> Affjax.affjax res req) `catchError` handler where
     handler e = pure (Invalid $ singleton $ (inj (SProxy :: SProxy "remoteError") $ show e))
 
 status
@@ -54,14 +64,13 @@ isStatusOK :: StatusCode -> Boolean
 isStatusOK (StatusCode n) = (n == 200)
 
 jsonFromRequest
-  :: forall ext req err
-   . Requestable req
-  => Validation
-      (Aff ( ajax :: AJAX | ext))
+  :: forall err
+   . Validation
+      Aff
       (Array (Variant(HttpErrorRow (AffjaxErrorRow (JsError err)))))
-      (AffjaxRequest req)
+      AffjaxRequest
       (Object Json)
-jsonFromRequest = object <<< status isStatusOK <<< affjax
+jsonFromRequest = object <<< status isStatusOK <<< affjaxForResponse json
 
 
 valJson
@@ -76,11 +85,10 @@ valJson = hoistFnV \response -> case jsonParser response of
   Left error -> Invalid  $ singleton (inj (SProxy :: SProxy "parsingError") error)
 
 affjaxJson
-  :: forall eff req errs
-   . Requestable req
-  => Validation
-      (Aff ( ajax :: AJAX | eff))
+  :: forall errs
+   . Validation
+      Aff
       (Array (Variant (HttpErrorRow(AffjaxErrorRow (JsonErrorRow errs)))))
-      (AffjaxRequest req)
+      AffjaxRequest
       Json
-affjaxJson = valJson <<< (status isStatusOK) <<< affjax
+affjaxJson = valJson <<< (status isStatusOK) <<< affjaxForResponse string

@@ -11,20 +11,18 @@ module Validators.UrlEncoded
 
 import Prelude
 
-import Data.Array (fromFoldable)
-import Data.Bifunctor (rmap)
 import Data.Either (Either(..))
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Number as Number
-import Foreign.Object (Object, lookup, fromFoldableWith, empty)
+import Foreign.Object (Object, lookup, empty)
 import Data.String (toLower)
 import Data.Symbol (SProxy(..))
-import URI (Query(..))
-import URI.Query (parser, Query, toString)
+import URI.Query (parser, Query)
 import Data.Validator (Errors, Validator, fail)
 import Data.Variant (inj)
 import Polyform.Validation (V(..), hoistFnV)
+import Text.Parsing.Parser.Pos (initialPos)
 import Text.Parsing.Parser (ParseError(..), runParser)
 
 type UrlValidation m e a b = Validator m (UrlError e) a b
@@ -35,7 +33,7 @@ _urlErr :: SProxy "urlError"
 _urlErr = SProxy
 
 failure :: forall e a. String -> V (Errors (UrlError e)) a
-failure s = fail $ inj _urlErr $ ParseError s
+failure s = fail $ inj _urlErr $ ParseError s initialPos
 
 fromEither :: forall e a. Either ParseError a -> V (Errors (UrlError e)) a
 fromEither (Left e) = fail $ inj _urlErr e
@@ -43,7 +41,7 @@ fromEither (Right v) = Valid [] v
 
 urlEncoded :: forall m e. Monad m => UrlValidation m e String UrlEncoded
 urlEncoded = hoistFnV \s ->
-  (queryToMap <$> (fromEither $ runParser parser ("?" <> s)))
+  (queryToMap <$> (fromEither $ runParser ("?" <> s) parser))
 
 queryToMap :: Query -> UrlEncoded
 queryToMap q = empty
