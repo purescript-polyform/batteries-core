@@ -2,7 +2,6 @@ module Validators.Combinators where
 
 import Prelude
 
-import Data.Monoid (class Monoid)
 import Polyform.Validation (V(..), Validation, hoistFnMV, runValidation)
 
 check

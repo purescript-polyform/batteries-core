@@ -1,0 +1,31 @@
+{
+  "name": "purescript-polyform-validators",
+  "description": "",
+  "main": "",
+  "authors": [
+    "hello@lambdaterms.com"
+  ],
+  "license": "BSD3",
+  "keywords": [
+    "polyform",
+    "form",
+    "validators"
+  ],
+  "homepage": "https://github.com/lambdaterms/purescript-polyform-validators",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "purescript-prelude": "^4.0.1",
+    "purescript-uri": "^6.0.0",
+    "purescript-parsing": "^5.0.1",
+    "purescript-numbers": "^6.0.0",
+    "purescript-argonaut": "^4.0.1",
+    "purescript-polyform": "^0.7.0",
+    "purescript-affjax": "^6.0.0"
+  }
+}

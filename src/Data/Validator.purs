@@ -1,4 +1,4 @@
-module Data.Validator 
+module Data.Validator
   ( Validator(..)
   , Errors(..)
   , fail

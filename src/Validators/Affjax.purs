@@ -2,15 +2,15 @@ module Validators.Affjax where
 
 import Prelude
 
-import Control.Monad.Aff (Aff)
 import Control.Monad.Error.Class (catchError)
 import Data.Argonaut (Json, jsonParser)
 import Data.Array (singleton)
 import Data.Either (Either(..))
 import Data.Functor.Variant (SProxy(..))
-import Data.StrMap (StrMap)
 import Data.Variant (Variant, inj)
-import Network.HTTP.Affjax (AJAX, AffjaxRequest, AffjaxResponse)
+import Effect.Aff (Aff)
+import Foreign.Object (Object)
+import Network.HTTP.Affjax (AffjaxRequest, AffjaxResponse)
 import Network.HTTP.Affjax (affjax) as Affjax
 import Network.HTTP.Affjax.Request (class Requestable)
 import Network.HTTP.Affjax.Response (class Respondable)
@@ -22,10 +22,10 @@ type HttpErrorRow (err :: # Type) = (wrongHttpStatus :: StatusCode | err)
 type AffjaxErrorRow (err :: # Type) = (remoteError :: String | err)
 type JsonErrorRow (err :: # Type) = (parsingError :: String | err)
 
-affjax 
+affjax
   :: forall req res ext err
-   . Requestable req 
-  => Respondable res 
+   . Requestable req
+  => Respondable res
   => Validation
       (Aff ( ajax :: AJAX | ext))
       (Array (Variant (AffjaxErrorRow err)))
@@ -35,38 +35,38 @@ affjax = hoistFnMV $ \req → do
   (Valid [] <$> Affjax.affjax req) `catchError` handler where
     handler e = pure (Invalid $ singleton $ (inj (SProxy :: SProxy "remoteError") $ show e))
 
-status 
+status
   :: forall m err res
-   . Monad m 
-  => (StatusCode -> Boolean) 
+   . Monad m
+  => (StatusCode -> Boolean)
   -> Validation m
       (Array (Variant (HttpErrorRow err)))
       (AffjaxResponse res)
-      res         
+      res
 status isCorrect = hoistFnV checkStatus where
   checkStatus response =
     if isCorrect response.status then
       Valid [] response.response
     else
       Invalid $ singleton $ (inj (SProxy :: SProxy "wrongHttpStatus") response.status)
-        
+
 isStatusOK :: StatusCode -> Boolean
 isStatusOK (StatusCode n) = (n == 200)
 
-jsonFromRequest 
+jsonFromRequest
   :: forall ext req err
-   . Requestable req 
+   . Requestable req
   => Validation
       (Aff ( ajax :: AJAX | ext))
       (Array (Variant(HttpErrorRow (AffjaxErrorRow (JsError err)))))
       (AffjaxRequest req)
-      (StrMap Json)
+      (Object Json)
 jsonFromRequest = object <<< status isStatusOK <<< affjax
 
 
-valJson 
+valJson
   :: forall m err
-   . Monad m 
+   . Monad m
   => Validation m
       (Array (Variant (JsonErrorRow err)))
       String

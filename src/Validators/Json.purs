@@ -1,4 +1,4 @@
-module Validators.Json 
+module Validators.Json
   ( JsError
   , JsValidation
   , array
@@ -15,25 +15,24 @@ module Validators.Json
 
 import Prelude
 
-import Data.Argonaut (Json, foldJson, toArray, toNumber, toObject, toString)
+import Data.Argonaut (Json, caseJson, toArray, toNumber, toObject, toString, stringify)
 import Data.Array ((!!))
 import Data.Bifunctor (lmap)
 import Data.Int (fromNumber)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
-import Data.Monoid (class Monoid, mempty)
-import Data.StrMap (StrMap, lookup)
 import Data.Symbol (SProxy(..))
 import Data.Traversable (sequence, traverse)
 import Data.Validator(Errors, Validator, fail)
 import Data.Variant(inj, prj)
+import Foreign.Object (Object, lookup)
 import Polyform.Validation (V, hoistFnMV, hoistFnV, runValidation)
 
 type JsError r = (jsError :: { path :: List String, msg :: String } | r)
 type JsValidation m e a = Validator m (JsError e) Json a
 
 jsType :: Json -> String
-jsType = foldJson
+jsType = caseJson
   (const "null")
   (const "bool")
   (const "number")
@@ -67,7 +66,7 @@ number = hoistFnV $ \v ->
     Nothing -> failure (jsType v <> " is not a number")
     Just x -> pure x
 
-object :: forall m e. Monad m => Validator m (JsError e) Json (StrMap Json)
+object :: forall m e. Monad m => Validator m (JsError e) Json (Object Json)
 object = hoistFnV $ \v ->
   case toObject v of
     Nothing -> failure (jsType v <> " is not an object")
@@ -82,7 +81,7 @@ string = hoistFnV $ \v ->
 field :: forall m e a. Monad m => String -> JsValidation m e a -> JsValidation m e a
 field f nested = object >>> hoistFnMV (\v ->
   case lookup f v of
-    Nothing -> pure $ failure ("no field " <> show f <> " in object " <> show v)
+    Nothing -> pure $ failure ("no field " <> show f <> " in object " <> show (stringify <$> v))
     Just json -> do
       res <- runValidation nested json
       pure $ lmap (extend f) res)
