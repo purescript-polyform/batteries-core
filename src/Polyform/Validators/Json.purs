@@ -1,4 +1,4 @@
-module Validators.Json
+module Polyform.Validators.Json
   ( JsError
   , JsValidation
   , array
@@ -23,10 +23,10 @@ import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (SProxy(..))
 import Data.Traversable (sequence, traverse)
-import Data.Validator(Errors, Validator, fail)
-import Data.Variant(inj, prj)
+import Data.Variant (inj, prj)
 import Foreign.Object (Object, lookup)
 import Polyform.Validation (V, hoistFnMV, hoistFnV, runValidation)
+import Polyform.Validators (Errors, Validator, fail)
 
 type JsError r = (jsError :: { path :: List String, msg :: String } | r)
 type JsValidation m e a = Validator m (JsError e) Json a

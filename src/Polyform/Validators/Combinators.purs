@@ -1,4 +1,4 @@
-module Validators.Combinators where
+module Polyform.Validators.Combinators where
 
 import Prelude
 

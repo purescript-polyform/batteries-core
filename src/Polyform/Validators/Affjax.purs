@@ -1,4 +1,4 @@
-module Validators.Affjax where
+module Polyform.Validators.Affjax where
 
 import Prelude
 
@@ -7,7 +7,6 @@ import Data.Argonaut (Json, jsonParser)
 import Data.Array (singleton)
 import Data.Either (Either(..))
 import Data.Functor.Variant (SProxy(..))
-import Data.Tuple (Tuple(..))
 import Data.Variant (Variant, inj)
 import Effect.Aff (Aff)
 import Foreign.Object (Object)
@@ -16,7 +15,7 @@ import Network.HTTP.Affjax (affjax) as Affjax
 import Network.HTTP.Affjax.Response (Response, json, string)
 import Network.HTTP.StatusCode (StatusCode(..))
 import Polyform.Validation (V(Invalid, Valid), Validation, hoistFnMV, hoistFnV)
-import Validators.Json (JsError, object)
+import Polyform.Validators.Json (JsError, object)
 
 type HttpErrorRow (err :: # Type) = (wrongHttpStatus :: StatusCode | err)
 type AffjaxErrorRow (err :: # Type) = (remoteError :: String | err)
@@ -24,24 +23,13 @@ type JsonErrorRow (err :: # Type) = (parsingError :: String | err)
 
 affjax
   :: forall a err
-   . Validation
-      Aff
-      (Array (Variant (AffjaxErrorRow err)))
-      (Tuple (Response a) AffjaxRequest)
-      (AffjaxResponse a)
-affjax = hoistFnMV $ \(Tuple res req) → do
-  (Valid [] <$> Affjax.affjax res req) `catchError` handler where
-    handler e = pure (Invalid $ singleton $ (inj (SProxy :: SProxy "remoteError") $ show e))
-
-affjaxForResponse
-  :: forall a err
    . (Response a)
   -> Validation
       Aff
       (Array (Variant (AffjaxErrorRow err)))
       AffjaxRequest
       (AffjaxResponse a)
-affjaxForResponse res = hoistFnMV $ \req → do
+affjax res = hoistFnMV $ \req → do
   (Valid [] <$> Affjax.affjax res req) `catchError` handler where
     handler e = pure (Invalid $ singleton $ (inj (SProxy :: SProxy "remoteError") $ show e))
 
@@ -70,8 +58,7 @@ jsonFromRequest
       (Array (Variant(HttpErrorRow (AffjaxErrorRow (JsError err)))))
       AffjaxRequest
       (Object Json)
-jsonFromRequest = object <<< status isStatusOK <<< affjaxForResponse json
-
+jsonFromRequest = object <<< status isStatusOK <<< affjax json
 
 valJson
   :: forall m err
@@ -91,4 +78,4 @@ affjaxJson
       (Array (Variant (HttpErrorRow(AffjaxErrorRow (JsonErrorRow errs)))))
       AffjaxRequest
       Json
-affjaxJson = valJson <<< (status isStatusOK) <<< affjaxForResponse string
+affjaxJson = valJson <<< status isStatusOK <<< affjax string

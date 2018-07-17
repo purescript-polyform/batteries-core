@@ -11,8 +11,8 @@
     "form",
     "validators"
   ],
-  "repository": {                                                           
-    "type": "git",                                                          
+  "repository": {
+    "type": "git",
     "url": "https://github.com/lambdaterms/purescript-polyform-validators.git"
   },
   "homepage": "https://github.com/lambdaterms/purescript-polyform-validators",
@@ -25,14 +25,13 @@
   ],
   "dependencies": {
     "purescript-prelude": "^4.0.1",
-    "purescript-uri": "^6.0.0",
-    "purescript-parsing": "^5.0.1",
     "purescript-numbers": "^6.0.0",
     "purescript-argonaut": "^4.0.1",
     "purescript-polyform": "^0.7.0",
     "purescript-affjax": "^6.0.0"
   },
   "devDependencies": {
-    "purescript-console": "^4.0.0"
+    "purescript-console": "^4.0.0",
+    "purescript-test-unit": "^14.0.0"
   }
 }
