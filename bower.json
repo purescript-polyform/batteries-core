@@ -1,6 +1,7 @@
 {
   "name": "purescript-polyform-validators",
   "description": "Set of useful validators on top of purescript-polyform",
+  "version": "0.0.1",
   "authors": [
     "hello@lambdaterms.com"
   ],
