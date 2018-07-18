@@ -6,7 +6,7 @@ Set of useful validators which are build on top of `Validation` from purescript-
 
 `Validation` type from polyform has Applicative and Category instance. Using these two interfaces and provided validators you can quite easily write whole validation chain: from ajax request to resulting object. This validation flow will aggregate in typed manner all encoutered errors at given failing step.
 
-Let's look at real example - here we are making a request to shutterstock API and validating its response. `Data.Record.Fold.collect` is like sequence but over record (so it takes an record of `Validation`s and returns `Validation` into record):
+Let's look at real example - here we are making a request to shutterstock API and validating its response. `Data.Record.Fold.collect` is like sequence but over a record (so it takes a record of `Validation`s per field and returns `Validation` which result is record):
 
 ``` purescript
 type SearchResult image =
@@ -33,6 +33,8 @@ searchResult = collect
   }
 ```
 
+In above example `image` is another `Validation` from `Json` into `Image`.
+
 Now using `affjaxJson` validator from this library we can chain these two validators to get fully validated request:
 
 ``` purescript
@@ -46,6 +48,6 @@ searchValidation
 searchValidation = searchResult <<< affjaxJson
 ```
 
-## Examples
+### More Examples
 
 For more usage examples please refer these simple libraries: [purescript-shutterstock](https://github.com/lambdaterms/purescript-shutterstock), [purescript-pexels](https://github.com/lambdaterms/purescript-pexels) or [purescript-nasa-images](https://github.com/lambdaterms/purescript-nasa-images).
