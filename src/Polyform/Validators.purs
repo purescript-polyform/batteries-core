@@ -1,6 +1,7 @@
 module Polyform.Validators
   ( Validator(..)
   , Errors(..)
+  , check
   , fail
   ) where
 
