@@ -11,21 +11,24 @@ module Polyform.Validators.Json
   , object
   , optionalField
   , string
-  ) where
+  )
+  where
 
 import Prelude
 
 import Data.Argonaut (Json, caseJson, toArray, toNumber, toObject, toString, stringify)
 import Data.Array ((!!))
 import Data.Bifunctor (lmap)
+import Data.Functor (mapFlipped)
 import Data.Int (fromNumber)
 import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Symbol (SProxy(..))
 import Data.Traversable (sequence, traverse)
+import Data.Validation.Semigroup (V)
 import Data.Variant (inj, prj)
 import Foreign.Object (Object, lookup)
-import Polyform.Validation (V, hoistFnMV, hoistFnV, runValidation)
+import Polyform.Validator (hoistFnMV, hoistFnV, runValidator)
 import Polyform.Validators (Errors, Validator, fail)
 
 type JsError r = (jsError :: { path :: List String, msg :: String } | r)
@@ -46,13 +49,13 @@ failure :: forall e a. String -> V (Errors (JsError e)) a
 failure msg = fail $ inj _jsErr { path: Nil, msg: msg }
 
 extendPath :: String -> { path :: List String, msg :: String } -> { path :: List String, msg :: String }
-extendPath p e = { path: p:e.path, msg: e.msg } 
+extendPath p e = { path: p:e.path, msg: e.msg }
 
 extend :: forall e. String -> Errors (JsError e) -> Errors (JsError e)
 extend s errs =
-  map (\err -> case prj _jsErr err of
+  mapFlipped errs \err -> case prj _jsErr err of
     Just jsErr -> inj _jsErr $ extendPath s jsErr
-    Nothing -> err) errs
+    Nothing -> err
 
 int :: forall m e. Monad m => JsValidation m e Int
 int = hoistFnV $ \v ->
@@ -83,7 +86,7 @@ field f nested = object >>> hoistFnMV (\v ->
   case lookup f v of
     Nothing -> pure $ failure ("no field " <> show f <> " in object " <> show (stringify <$> v))
     Just json -> do
-      res <- runValidation nested json
+      res <- runValidator nested json
       pure $ lmap (extend f) res)
 
 optionalField
@@ -95,7 +98,7 @@ optionalField f nested = object >>> hoistFnMV (\v ->
   case lookup f v of
     Nothing -> pure $ pure mempty
     Just json -> do
-      res <- runValidation nested json
+      res <- runValidator nested json
       pure $ lmap (extend f) res)
 
 array :: forall m e. Monad m => JsValidation m e (Array Json)
@@ -108,9 +111,9 @@ elem :: forall m e a. Monad m => Int -> JsValidation m e a -> JsValidation m e a
 elem i v = array >>> hoistFnMV (\arr ->
   case arr !! i of
     Nothing -> pure $ failure ("no element at index " <> show i)
-    Just a -> runValidation v a)
+    Just a -> runValidator v a)
 
 arrayOf :: forall m e a. Monad m => JsValidation m e a -> JsValidation m e (Array a)
 arrayOf v = array >>> hoistFnMV f
   where
-    f = map sequence <<< traverse (runValidation v)
+    f = map sequence <<< traverse (runValidator v)

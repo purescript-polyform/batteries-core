@@ -19,7 +19,7 @@
     "purescript-prelude": "^4.0.1",
     "purescript-numbers": "^6.0.0",
     "purescript-argonaut": "^4.0.1",
-    "purescript-polyform": "^0.7.0",
+    "purescript-polyform": "https://github.com/paluh/purescript-polyform.git#redesign",
     "purescript-affjax": "^6.0.0"
   },
   "devDependencies": {

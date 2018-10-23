@@ -7,7 +7,8 @@ module Polyform.Validators.UrlEncoded
   , number
   , single
   , urlEncoded
-  ) where
+  )
+  where
 
 import Prelude
 
@@ -22,9 +23,10 @@ import Data.String (Pattern(..), Replacement(..), joinWith, replaceAll, split, t
 import Data.Symbol (SProxy(..))
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..))
+import Data.Validation.Semigroup (V)
 import Data.Variant (inj)
 import Foreign.Object (Object, fromFoldable, lookup)
-import Polyform.Validation (V(..), hoistFnV)
+import Polyform.Validator (hoistFnV)
 import Polyform.Validators (Errors, Validator, fail)
 
 type UrlValidation m e a b = Validator m (UrlError e) a b
@@ -39,7 +41,7 @@ failure s = fail $ inj _urlErr $ s
 
 fromEither :: forall e a. Either String a -> V (Errors (UrlError e)) a
 fromEither (Left e) = fail $ inj _urlErr e
-fromEither (Right v) = Valid [] v
+fromEither (Right v) = pure v
 
 foreign import decodeURIComponentImpl :: String -> Nullable String
 

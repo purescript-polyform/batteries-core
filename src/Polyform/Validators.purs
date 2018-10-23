@@ -9,21 +9,26 @@ import Prelude
 
 import Data.Array (singleton)
 import Data.Variant (Variant)
-import Polyform.Validation (V(..), Validation, hoistFnMV, runValidation)
+import Data.Validation.Semigroup (invalid, unV, V)
+import Polyform.Validator (Validator) as Polyform
+import Polyform.Validator (hoistFnMV, runValidator)
 
 type Errors e = Array (Variant e)
-type Validator m e a = Validation m (Errors e) a
+type Validator m e a = Polyform.Validator m (Errors e) a
 
 fail :: forall e a. Variant e -> V (Errors e) a
-fail e = Invalid $ singleton e
+fail e = invalid $ singleton e
 
 check
   :: forall e m a
    . Monoid e
-  => Monad m => (a -> e) -> Validation m e a Boolean -> Validation m e a a
+  => Monad m
+  => (a -> e)
+  -> Polyform.Validator m e a Boolean
+  -> Polyform.Validator m e a a
 check msg pred = hoistFnMV $ \v -> do
-  b <- runValidation pred v
-  pure $ case b of
-    Valid e true -> Valid e v
-    Valid e false -> Invalid $ (msg v) <> e
-    Invalid e -> Invalid e
+  b <- runValidator pred v
+  pure $ unV
+    invalid
+    (if _ then pure v else invalid (msg v))
+    b
