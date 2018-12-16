@@ -3,23 +3,25 @@ module Polyform.Dual.Validators.Json where
 import Prelude
 
 import Data.Argonaut (Json, fromNumber, fromObject, fromString) as Argonaut
-import Data.Argonaut (stringify)
+import Data.Argonaut (Json, stringify)
 import Data.Bifunctor (lmap)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap, wrap)
 import Data.Semigroup.First (First(..))
-import Data.Symbol (reflectSymbol)
 import Foreign.Object (Object, lookup, singleton) as Foreign
-import Polyform.Dual (dual, (>-))
+import Polyform.Dual (DualD, dual, (>-))
 import Polyform.Dual.Validator as Dual.Validator
-import Polyform.Validator (hoistFn, hoistFnMV, runValidator)
-import Polyform.Validators (Errors) as Validtors
+import Polyform.Validator (Validator, hoistFn, hoistFnMV, runValidator)
+import Polyform.Validators (Errors) as Validators
 import Polyform.Validators.Json (JsError, extendErr, failure)
 import Polyform.Validators.Json (int, number, object, string) as Validators.Json
+import Prim.Row (class Cons)
 import Record (get)
+import Type.Data.Symbol (SProxy)
+import Type.Prelude (class IsSymbol, reflectSymbol)
 
-type Dual m e a b = Dual.Validator.Validator m (Validtors.Errors e) a b
+type Dual m e a b = Dual.Validator.Validator m (Validators.Errors e) a b
 type JsonDual m e a = Dual m (JsError e) Argonaut.Json a
 
 type Object a = Foreign.Object (First a)
@@ -65,11 +67,17 @@ objectField label d =
           pure $ lmap (extendErr label) res
     serializer = fieldDual.serializer >>> First >>> Foreign.singleton label
 
--- objectField :: forall m e a. Monad m => String -> JsonDual m e a -> ObjectDual m e a
-field label validator =
+objectField' :: forall a e m r r' s
+  . IsSymbol s
+  => Cons s a r' r
+  => Monad m
+  => SProxy s
+  -> JsonDual m e a
+  -> DualD (Validator m (Validators.Errors (JsError e))) (Object Json) { | r } a
+objectField' label validator =
   get label >- objectField (reflectSymbol label) validator
 
-infix 7 field as :=
+infix 7 objectField' as :=
 
 newtypeDual :: forall a e m n. Monad m => Newtype n a => Dual m e a n
 newtypeDual = dual
