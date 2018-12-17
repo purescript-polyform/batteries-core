@@ -14,7 +14,7 @@ import Polyform.Dual (DualD, dual, (>-))
 import Polyform.Dual.Validator as Dual.Validator
 import Polyform.Validator (Validator, hoistFn, hoistFnMV, runValidator)
 import Polyform.Validators (Errors) as Validators
-import Polyform.Validators.Json (JsonError, extendErr, failure)
+import Polyform.Validators.Json (JsonError, JsonDecodingError, extendErr, failure)
 import Polyform.Validators.Json (int, json, number, object, string) as Validators.Json
 import Prim.Row (class Cons)
 import Record (get)
@@ -23,7 +23,7 @@ import Type.Prelude (class IsSymbol, reflectSymbol)
 
 json :: forall e m
    . Monad m
-  => Dual m (jsonDecodingError ∷ String | e) String Json
+  => Dual m (JsonDecodingError e) String Json
 json = dual
   { parser: Validators.Json.json
   , serializer: Argonaut.stringify

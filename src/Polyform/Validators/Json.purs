@@ -1,5 +1,6 @@
 module Polyform.Validators.Json
   ( JsonError
+  , JsonDecodingError
   , JsonValidator
   , array
   , arrayOf
@@ -38,12 +39,13 @@ import Polyform.Validators (Errors, Validator, fail)
 -- | It is not incorporated into default `JsonValidator` stack
 -- | because you don't have to start from `String` value
 -- | (as it is in case of for example Affjax).
+type JsonDecodingError e = (jsonDecodingError :: String | e)
 json
   :: forall e m
    . Monad m
   => Validator
       m
-      (jsonDecodingError :: String | e)
+      (JsonDecodingError e)
       String
       Json
 json = hoistFnV $ jsonParser >>> case _ of
