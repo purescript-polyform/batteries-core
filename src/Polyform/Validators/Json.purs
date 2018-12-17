@@ -9,6 +9,7 @@ module Polyform.Validators.Json
   , field
   , number
   , int
+  , json
   , object
   , optionalField
   , string
@@ -38,16 +39,16 @@ import Polyform.Validators (Errors, Validator, fail)
 -- | because you don't have to start from `String` value
 -- | (as it is in case of for example Affjax).
 json
-  :: forall err m
+  :: forall e m
    . Monad m
   => Validator
       m
-      (jsonDecodingError ∷ String | err)
+      (jsonDecodingError :: String | e)
       String
       Json
 json = hoistFnV $ jsonParser >>> case _ of
-  Right j → pure j
-  Left e → invalid ([inj (SProxy ∷ SProxy "jsonDecodingError") e])
+  Right j -> pure j
+  Left e -> invalid ([inj (SProxy :: SProxy "jsonDecodingError") e])
 
 type JsonError r = (jsonError :: { path :: List String, msg :: String } | r)
 type JsonValidator m e a = Validator m (JsonError e) Json a

@@ -15,7 +15,7 @@ import Polyform.Dual.Validator as Dual.Validator
 import Polyform.Dual.Validators.Json (JsonDual, ObjectDual, (:=))
 import Polyform.Dual.Validators.Json (int, number, object, string) as Dual.Json
 import Polyform.Validator (runValidator)
-import Polyform.Validators.Json (JsError)
+import Polyform.Validators.Json (JsonError)
 import Polyform.Validators.UrlEncoded (urlEncoded)
 import Test.Unit (failure, test)
 import Test.Unit (suite) as Test.Unit
@@ -32,7 +32,7 @@ d = Dual $ { foo: _, bar: _, baz: _ }
 
 obj :: forall e. JsonDual
   Aff
-  (JsError + e)
+  (JsonError + e)
   { foo :: Int
   , bar :: String
   , baz :: Number

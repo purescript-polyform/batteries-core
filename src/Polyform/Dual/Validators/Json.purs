@@ -2,7 +2,7 @@ module Polyform.Dual.Validators.Json where
 
 import Prelude
 
-import Data.Argonaut (Json, fromNumber, fromObject, fromString) as Argonaut
+import Data.Argonaut (Json, fromNumber, fromObject, fromString, stringify) as Argonaut
 import Data.Argonaut (Json, stringify)
 import Data.Bifunctor (lmap)
 import Data.Int (toNumber)
@@ -14,15 +14,23 @@ import Polyform.Dual (DualD, dual, (>-))
 import Polyform.Dual.Validator as Dual.Validator
 import Polyform.Validator (Validator, hoistFn, hoistFnMV, runValidator)
 import Polyform.Validators (Errors) as Validators
-import Polyform.Validators.Json (JsError, extendErr, failure)
-import Polyform.Validators.Json (int, number, object, string) as Validators.Json
+import Polyform.Validators.Json (JsonError, extendErr, failure)
+import Polyform.Validators.Json (int, json, number, object, string) as Validators.Json
 import Prim.Row (class Cons)
 import Record (get)
 import Type.Data.Symbol (SProxy)
 import Type.Prelude (class IsSymbol, reflectSymbol)
 
+json :: forall e m
+   . Monad m
+  => Dual m (jsonDecodingError ∷ String | e) String Json
+json = dual
+  { parser: Validators.Json.json
+  , serializer: Argonaut.stringify
+  }
+
 type Dual m e a b = Dual.Validator.Validator m (Validators.Errors e) a b
-type JsonDual m e a = Dual m (JsError e) Argonaut.Json a
+type JsonDual m e a = Dual m (JsonError e) Argonaut.Json a
 
 type Object a = Foreign.Object (First a)
 
@@ -52,7 +60,7 @@ string = dual
   , serializer: Argonaut.fromString
   }
 
-type ObjectDual m e a = Dual m (JsError e) (Object Argonaut.Json) a
+type ObjectDual m e a = Dual m (JsonError e) (Object Argonaut.Json) a
 
 objectField :: forall m e a. Monad m => String -> JsonDual m e a -> ObjectDual m e a
 objectField label d =
@@ -62,8 +70,8 @@ objectField label d =
     parser = hoistFnMV \obj ->
       case Foreign.lookup label obj of
         Nothing -> pure $ failure ("no field " <> show label <> " in object " <> show ((stringify <<< unwrap) <$> obj))
-        Just (First json) -> do
-          res <- runValidator fieldDual.parser json
+        Just (First j) -> do
+          res <- runValidator fieldDual.parser j
           pure $ lmap (extendErr label) res
     serializer = fieldDual.serializer >>> First >>> Foreign.singleton label
 
@@ -73,7 +81,7 @@ objectField' :: forall a e m r r' s
   => Monad m
   => SProxy s
   -> JsonDual m e a
-  -> DualD (Validator m (Validators.Errors (JsError e))) (Object Json) { | r } a
+  -> DualD (Validator m (Validators.Errors (JsonError e))) (Object Json) { | r } a
 objectField' label validator =
   get label >- objectField (reflectSymbol label) validator
 
