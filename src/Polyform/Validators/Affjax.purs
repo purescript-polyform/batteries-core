@@ -12,10 +12,8 @@ import Data.Functor.Variant (SProxy(..))
 import Data.Validation.Semigroup (V, invalid)
 import Data.Variant (inj)
 import Effect.Aff (Aff)
-import Foreign.Object (Object)
 import Polyform.Validator (hoistFn, hoistFnMV, hoistFnV)
 import Polyform.Validators (Validator)
-import Polyform.Validators.Json (JsError, object)
 import Record (set)
 import Type.Row (type (+))
 
@@ -74,15 +72,6 @@ body = hoistFn _.body
 
 isStatusOK :: StatusCode -> Boolean
 isStatusOK (StatusCode n) = (n == 200)
-
-json
-  :: forall err
-   . Validator
-      Aff
-      (HttpError + AffjaxError + JsError + ResponseFormatError + err)
-      (Affjax.Request Json)
-      (Object Json)
-json = object <<< body <<< status isStatusOK <<< affjax
 
 affjaxJson
   :: forall errs
