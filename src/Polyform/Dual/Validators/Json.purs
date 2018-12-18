@@ -1,4 +1,14 @@
-module Polyform.Dual.Validators.Json where
+module Polyform.Dual.Validators.Json
+  ( json
+  , number
+  , mapDual
+  , newtypeDual
+  , object
+  , objectField
+  , objectField'
+  , string
+  )
+  where
 
 import Prelude
 
