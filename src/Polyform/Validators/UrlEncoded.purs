@@ -1,134 +1,89 @@
 module Polyform.Validators.UrlEncoded
-  ( UrlValidation
-  , UrlError
+  ( module Types
   , array
   , boolean
+  , field
   , int
   , number
-  , single
-  , urlEncoded
+  , optional
+  , parse
+  , string
   )
   where
 
 import Prelude
 
-import Control.Monad.Except (throwError)
-import Data.Array (filter) as Array
-import Data.Either (Either(..))
+import Data.Array (singleton) as Array
+import Data.Bifunctor (lmap)
 import Data.Int as Int
+import Data.Map (lookup) as Map
 import Data.Maybe (Maybe(..))
-import Data.Nullable (Nullable, toMaybe)
 import Data.Number as Number
-import Data.String (Pattern(..), Replacement(..), joinWith, replaceAll, split, toLower)
-import Data.Symbol (SProxy(..))
-import Data.Traversable (sequence)
-import Data.Tuple (Tuple(..))
-import Data.Validation.Semigroup (V)
+import Data.Validation.Semigroup (invalid)
 import Data.Variant (inj)
-import Foreign.Object (Object, fromFoldable, lookup)
-import Polyform.Validator (hoistFnV)
-import Polyform.Validators (Errors, Validator, fail)
+import Polyform.Validator (hoistFn, hoistFnEither, hoistFnMV, hoistFnV, runValidator)
+import Polyform.Validator as Polyform.Validator
+import Polyform.Validators (Errors)
+import Polyform.Validators.UrlEncoded.Parser (Options, parse) as Parser
+import Polyform.Validators.UrlEncoded.Types (Decoded, Error, Validator, _urlDecoding, _urlField)
+import Polyform.Validators.UrlEncoded.Types (Decoded, Error, Validator, _urlDecoding, _urlField) as Types
 
-type UrlValidation m e a b = Validator m (UrlError e) a b
-type UrlError e = (urlError :: String | e)
-type UrlEncoded = Object (Array String)
+-- | This module provides validators for urlencoded values.
+-- | In general it follows "browsers standard" for encoding
+-- | so it should be useful in the context of request validation.
+-- | On the other hand if you want to build backend form
+-- | validation solution on top of this it is probably
+-- | better to take a look at `Polyform.Validator.Reporter`.
 
-_urlErr :: SProxy "urlError"
-_urlErr = SProxy
+parse :: forall m e. Monad m => Parser.Options -> Validator m e String Decoded
+parse opts = hoistFnEither (lmap (Array.singleton <<< inj _urlDecoding) <<< Parser.parse opts)
 
-failure :: forall e a. String -> V (Errors (UrlError e)) a
-failure s = fail $ inj _urlErr $ s
+-- | `String` error is transformed into `Types.Error` in "form" level validators
+type FieldValueValidator m a = Polyform.Validator.Validator m String (Maybe (Array String)) a
 
-fromEither :: forall e a. Either String a -> V (Errors (UrlError e)) a
-fromEither (Left e) = fail $ inj _urlErr e
-fromEither (Right v) = pure v
+-- | Encodes default browser behavior which sets `checkbox` value to "on"
+-- | when checked and skips it completely when it is not.
+-- | We consider also "off" value because we want to be more consistent when
+-- | building API comunication layer - if you have any objections please fill
+-- | an issue with description.
+boolean :: forall m. Monad m => FieldValueValidator m Boolean
+boolean = hoistFnV $ case _ of
+  Just ["on"] -> pure true
+  Just ["off"] -> pure false
+  Nothing -> pure false
+  Just v -> invalid $ "Could not parse \"" <> show v <> "\" value as boolean."
 
-foreign import decodeURIComponentImpl :: String -> Nullable String
+string :: forall m. Monad m => FieldValueValidator m String
+string = hoistFnV $ case _ of
+  Just [v] -> pure v
+  Just v -> invalid $ "Multiple values provided: " <> show v
+  Nothing -> invalid $ "Missing value"
 
-decodeURIComponent :: String -> Maybe String
-decodeURIComponent = toMaybe <<< decodeURIComponentImpl
+number :: forall m. Monad m => FieldValueValidator m Number
+number = flip compose string $ hoistFnV $ \s -> case Number.fromString s of
+  Just n -> pure n
+  Nothing -> invalid $ "Could not parse " <> s <> " as number"
 
--- | I've written about this issue extensively:
--- | https://github.com/owickstrom/hyper/pull/62
--- |
--- | Shortly: browsers serialize space as `+` character
--- | which is incorrect according to the RFC 3986
--- | but it is spread behavior accross tested engines.
--- |
--- | If we want to be able to optionally distinct this `+`
--- | on the server side we have to convert it to `%2b` before
--- | decoding phase (as it is done in all investigated
--- | libraries - please check first post in the above thread).
-type Options = { replacePlus :: Boolean }
+int :: forall m. Monad m => FieldValueValidator m Int
+int = flip compose string $ hoistFnV $ \s -> case Int.fromString s of
+  Just n -> pure n
+  Nothing -> invalid $ "Could not parse " <> s <> " as int"
 
-defaultOptions :: Options
-defaultOptions = { replacePlus: true }
+array :: forall m. Monad m => FieldValueValidator m (Array String)
+array = hoistFn $ case _ of
+  Just s -> s
+  Nothing -> []
 
-parse :: Options -> String -> Either String UrlEncoded
-parse opts
-  = split (Pattern "&")
-  >>> Array.filter (_ /= "")
-  >>> map (split (Pattern "="))
-  >>> map toTuple
-  >>> sequence
-  >>> map fromFoldable
+optional :: forall a m. Monad m => FieldValueValidator m a -> FieldValueValidator m (Maybe a)
+optional v = hoistFnMV $ case _ of
+  Just [] -> pure (pure Nothing)
+  Nothing -> pure (pure Nothing)
+  value -> map Just <$> runValidator v value
+
+field :: forall a e m. Monad m => String -> FieldValueValidator m a -> Validator m e Decoded a
+field name validator =
+  hoistFnMV (Map.lookup name >>> pure >=> runValidator validator >=> lmap failure >>> pure)
   where
-  toTuple :: Array String -> Either String (Tuple String (Array String))
-  toTuple kv =
-    case kv of
-      [key] -> case decodeURIComponent key of
-        Nothing → throwError (keyDecodingError key)
-        Just key' → pure (Tuple key' [])
-      [key, value] ->
-        let
-          value' =
-            if opts.replacePlus
-              then
-                replaceAll (Pattern "+") (Replacement " ") value
-              else
-                value
-        in
-          -- XXX we should probably change UrlError so it aggregates list of errors
-          case (decodeURIComponent key), (decodeURIComponent value') of
-            Just key', Just value'' → pure (Tuple key [value''])
-            Nothing, Just _ → throwError (keyDecodingError key)
-            Just key', Nothing → throwError (valueDecodingError key' value)
-            Nothing, Nothing → throwError (keyDecodingError key <> ", " <> valueDecodingError key value)
-      parts ->
-        throwError ("Invalid form key-value pair: " <> joinWith " " parts)
-    where
-    keyDecodingError key = "Unable to decode key: " <> key
-    valueDecodingError key value
-      = "Unable to decode key value: key = "
-      <> show key
-      <> ", value = "
-      <> show value
+  failure :: String -> Errors (Error e)
+  failure e = [ inj _urlField { field: name, error: e } ]
 
-urlEncoded :: forall m e. Monad m => Options → UrlValidation m e String UrlEncoded
-urlEncoded opts = hoistFnV $ \s -> fromEither (parse opts s)
-
-number :: forall m e. Monad m => UrlValidation m e String Number
-number = hoistFnV $ \s -> case Number.fromString s of
-  Just n -> pure n
-  Nothing -> failure $ "Could not parse " <> s <> " as number"
-
-int :: forall m e. Monad m => UrlValidation m e String Int
-int = hoistFnV $ \s -> case Int.fromString s of
-  Just n -> pure n
-  Nothing -> failure $ "Could not parse " <> s <> " as int"
-
-boolean :: forall m e. Monad m => UrlValidation m e String Boolean
-boolean = hoistFnV $ \s -> case toLower s of
-  "false" -> pure false
-  "true" -> pure true
-  _ -> failure $ "Could not parse " <> s <> " as boolean"
-
-single :: forall m e. Monad m => String -> UrlValidation m e UrlEncoded String
-single f = hoistFnV $ \q -> case lookup f q of
-  Just [s] -> pure s
-  _ -> failure $ "Could not find field " <> f
-
-array :: forall m e. Monad m => String -> UrlValidation m e UrlEncoded (Array String)
-array f = hoistFnV $ \q -> case lookup f q of
-  Just s -> pure s
-  Nothing -> failure $ "Could not find field " <> f
