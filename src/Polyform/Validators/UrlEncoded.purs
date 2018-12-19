@@ -1,5 +1,6 @@
 module Polyform.Validators.UrlEncoded
   ( module Types
+  , FieldValueValidator
   , array
   , boolean
   , field
