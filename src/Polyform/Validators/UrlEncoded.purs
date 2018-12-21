@@ -1,5 +1,6 @@
 module Polyform.Validators.UrlEncoded
-  ( module Types
+  ( module Parser
+  , module Types
   , FieldValueValidator
   , array
   , boolean
@@ -7,7 +8,7 @@ module Polyform.Validators.UrlEncoded
   , int
   , number
   , optional
-  , parse
+  , query
   , string
   )
   where
@@ -25,7 +26,8 @@ import Data.Variant (inj)
 import Polyform.Validator (hoistFn, hoistFnEither, hoistFnMV, hoistFnV, runValidator)
 import Polyform.Validator as Polyform.Validator
 import Polyform.Validators (Errors)
-import Polyform.Validators.UrlEncoded.Parser (Options, parse) as Parser
+import Polyform.Validators.UrlEncoded.Parser (Options) as Parser
+import Polyform.Validators.UrlEncoded.Parser (parse)
 import Polyform.Validators.UrlEncoded.Types (Decoded, Error, Validator, _urlDecoding, _urlValueParsing) as Types
 
 -- | This module provides validators for urlencoded values.
@@ -34,9 +36,8 @@ import Polyform.Validators.UrlEncoded.Types (Decoded, Error, Validator, _urlDeco
 -- | On the other hand if you want to build backend form
 -- | validation solution on top of this it is probably
 -- | better to take a look at `Polyform.Validator.Reporter`.
-
-parse :: forall m e. Monad m => Parser.Options -> Types.Validator m e String Types.Decoded
-parse opts = hoistFnEither (lmap (Array.singleton <<< inj Types._urlDecoding) <<< Parser.parse opts)
+query :: forall m e. Monad m => Parser.Options -> Types.Validator m e String Types.Decoded
+query opts = hoistFnEither (lmap (Array.singleton <<< inj Types._urlDecoding) <<< parse opts)
 
 -- | `String` error is transformed into `Types.Error` in "form" level validators
 type FieldValueValidator m a = Polyform.Validator.Validator m String (Maybe (Array String)) a
@@ -82,8 +83,8 @@ optional v = hoistFnMV $ case _ of
 
 field :: forall a e m. Monad m => String -> FieldValueValidator m a -> Types.Validator m e Types.Decoded a
 field name validator =
-  hoistFnMV $ \query → do
-    let input = Map.lookup name query
+  hoistFnMV $ \q → do
+    let input = Map.lookup name q
     result ← runValidator validator input
     pure $ lmap (failure input) result
   where
