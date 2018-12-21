@@ -1,5 +1,10 @@
 module Polyform.Dual.Validators.Json
-  ( json
+  ( Dual
+  , JsonDual
+  , ObjectDual
+  , Object
+  , int
+  , json
   , number
   , mapDual
   , newtypeDual
@@ -7,6 +12,7 @@ module Polyform.Dual.Validators.Json
   , objectField
   , objectField'
   , string
+  , (:=)
   )
   where
 

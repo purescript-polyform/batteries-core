@@ -26,8 +26,7 @@ import Polyform.Validator (hoistFn, hoistFnEither, hoistFnMV, hoistFnV, runValid
 import Polyform.Validator as Polyform.Validator
 import Polyform.Validators (Errors)
 import Polyform.Validators.UrlEncoded.Parser (Options, parse) as Parser
-import Polyform.Validators.UrlEncoded.Types (Decoded, Error, Validator, _urlDecoding, _urlField)
-import Polyform.Validators.UrlEncoded.Types (Decoded, Error, Validator, _urlDecoding, _urlField) as Types
+import Polyform.Validators.UrlEncoded.Types (Decoded, Error, Validator, _urlDecoding, _urlValueParsing) as Types
 
 -- | This module provides validators for urlencoded values.
 -- | In general it follows "browsers standard" for encoding
@@ -36,8 +35,8 @@ import Polyform.Validators.UrlEncoded.Types (Decoded, Error, Validator, _urlDeco
 -- | validation solution on top of this it is probably
 -- | better to take a look at `Polyform.Validator.Reporter`.
 
-parse :: forall m e. Monad m => Parser.Options -> Validator m e String Decoded
-parse opts = hoistFnEither (lmap (Array.singleton <<< inj _urlDecoding) <<< Parser.parse opts)
+parse :: forall m e. Monad m => Parser.Options -> Types.Validator m e String Types.Decoded
+parse opts = hoistFnEither (lmap (Array.singleton <<< inj Types._urlDecoding) <<< Parser.parse opts)
 
 -- | `String` error is transformed into `Types.Error` in "form" level validators
 type FieldValueValidator m a = Polyform.Validator.Validator m String (Maybe (Array String)) a
@@ -81,10 +80,13 @@ optional v = hoistFnMV $ case _ of
   Nothing -> pure (pure Nothing)
   value -> map Just <$> runValidator v value
 
-field :: forall a e m. Monad m => String -> FieldValueValidator m a -> Validator m e Decoded a
+field :: forall a e m. Monad m => String -> FieldValueValidator m a -> Types.Validator m e Types.Decoded a
 field name validator =
-  hoistFnMV (Map.lookup name >>> pure >=> runValidator validator >=> lmap failure >>> pure)
+  hoistFnMV $ \query → do
+    let input = Map.lookup name query
+    result ← runValidator validator input
+    pure $ lmap (failure input) result
   where
-  failure :: String -> Errors (Error e)
-  failure e = [ inj _urlField { field: name, error: e } ]
+  failure :: (Maybe (Array String)) -> String -> Errors (Types.Error e)
+  failure input error = [ inj Types._urlValueParsing { error, field: name, input } ]
 
