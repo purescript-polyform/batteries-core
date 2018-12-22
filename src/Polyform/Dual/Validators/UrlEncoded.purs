@@ -26,7 +26,7 @@ import Data.Newtype (class Newtype, unwrap)
 import Data.Number.Format (toString) as Number.Format
 import Data.Profunctor (lcmap, rmap)
 import Data.String (joinWith) as String
-import Global.Unsafe (unsafeEncodeURI)
+import Global.Unsafe (unsafeEncodeURIComponent)
 import Polyform.Dual (Dual) as Polyform.Dual
 import Polyform.Dual (dual)
 import Polyform.Dual (parser, serializer) as Dual
@@ -59,7 +59,7 @@ query opts = dual
         step key values q =
           foldr (substep key) mempty values <> q
         substep key value subquery =
-          List.Cons (unsafeEncodeURI key <> "=" <> unsafeEncodeURI value) subquery
+          List.Cons (unsafeEncodeURIComponent key <> "=" <> unsafeEncodeURIComponent value) subquery
 
 instance semigroupDecoded ∷ Semigroup Decoded where
   append (Decoded d1) (Decoded d2) = Decoded (Map.unionWith append d1 d2)
