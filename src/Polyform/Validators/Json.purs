@@ -4,6 +4,7 @@ module Polyform.Validators.Json
   , Validator
   , array
   , arrayOf
+  , boolean
   , elem
   , extendErr
   , failure
@@ -11,6 +12,7 @@ module Polyform.Validators.Json
   , number
   , int
   , json
+  , jsType
   , object
   , optionalField
   , string
@@ -19,7 +21,7 @@ module Polyform.Validators.Json
 
 import Prelude
 
-import Data.Argonaut (Json, caseJson, jsonParser, stringify, toArray, toNumber, toObject, toString)
+import Data.Argonaut (Json, caseJson, jsonParser, stringify, toArray, toBoolean, toNumber, toObject, toString)
 import Data.Array ((!!))
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
@@ -85,13 +87,19 @@ int = hoistFnV $ \v ->
     Nothing -> failure (jsType v <> " is not an int")
     Just n -> pure n
 
+boolean ∷ ∀ m e. Monad m ⇒ Validator m e Boolean
+boolean = hoistFnV $ \v ->
+  case toBoolean v of
+    Nothing -> failure (jsType v <> " is not a number")
+    Just x -> pure x
+
 number :: forall m e. Monad m => Validator m e Number
 number = hoistFnV $ \v ->
   case toNumber v of
     Nothing -> failure (jsType v <> " is not a number")
     Just x -> pure x
 
-object :: forall m e. Monad m => Validators.Validator m (JsonError e) Json (Object Json)
+object :: forall m e. Monad m => Validator m e (Object Json)
 object = hoistFnV $ \v ->
   case toObject v of
     Nothing -> failure (jsType v <> " is not an object")
