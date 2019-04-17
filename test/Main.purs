@@ -77,20 +77,19 @@ sumDual = Dual.object >>> tagWithValue >>> valueDual
       <$> _.t >- Dual.Json.objectField "tag" Dual.Json.string
       <*> _.v >- Dual.Json.objectField "value" identity
 
-    sumParser = hoistFnMV $ case _ of
+    parser = hoistFnMV $ case _ of
       { t: "S", v } → runValidator (Json.string >>> hoistFn S) v
       { t: "I", v } → runValidator (Json.int >>> hoistFn I) v
       { t: "B", v } → runValidator (Json.boolean >>> hoistFn B) v
       { t, v } → pure $ Json.failure
         ("Invalid tag: " <> t <> " with value: " <> (stringify v) )
 
-    valueDual = dual
-      { parser: sumParser
-      , serializer: case _ of
-          S s → { t: "S", v: Argounaut.fromString s }
-          I i → { t: "I", v: Argonaut.fromNumber <<< toNumber $ i }
-          B b → { t: "B", v: Argonaut.fromBoolean $ b }
-      }
+    serializer = case _ of
+      S s → { t: "S", v: Argounaut.fromString s }
+      I i → { t: "I", v: Argonaut.fromNumber <<< toNumber $ i }
+      B b → { t: "B", v: Argonaut.fromBoolean $ b }
+
+    valueDual = dual { parser, serializer }
 
 main ∷ Effect Unit
 main = runTest $ do
