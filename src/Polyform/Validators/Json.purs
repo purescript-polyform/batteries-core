@@ -38,10 +38,10 @@ import Polyform.Validator (hoistFnMV, hoistFnV, runValidator)
 import Polyform.Validators (Errors, fail)
 import Polyform.Validators (Validator) as Validators
 
--- | Validator which builds `Json` from `String`.
+-- | Validator which builds `Json` value from `String`.
 -- | It is not incorporated into default `Validator` stack
 -- | because you don't have to start from `String` value
--- | (as it is in case of for example Affjax).
+-- | (as it is in case of for example `Affjax` validator).
 type JsonDecodingError e = (jsonDecoding :: String | e)
 json
   :: forall e m
@@ -72,7 +72,10 @@ _json = SProxy :: SProxy "json"
 failure :: forall e a. String -> V (Errors (JsonError e)) a
 failure msg = fail $ inj _json { path: Nil, msg: msg }
 
-extendErrPath :: String -> { path :: List String, msg :: String } -> { path :: List String, msg :: String }
+extendErrPath
+  :: String
+  -> { path :: List String, msg :: String }
+  -> { path :: List String, msg :: String }
 extendErrPath p e = { path: p:e.path, msg: e.msg }
 
 extendErr :: forall e. String -> Errors (JsonError e) -> Errors (JsonError e)
@@ -87,7 +90,7 @@ int = hoistFnV $ \v ->
     Nothing -> failure (jsType v <> " is not an int")
     Just n -> pure n
 
-boolean ∷ ∀ m e. Monad m ⇒ Validator m e Boolean
+boolean :: forall m e. Monad m => Validator m e Boolean
 boolean = hoistFnV $ \v ->
   case toBoolean v of
     Nothing -> failure (jsType v <> " is not a number")
@@ -111,25 +114,47 @@ string = hoistFnV $ \v ->
     Nothing -> failure (jsType v <> " is not a string")
     Just s -> pure s
 
-field :: forall m e a. Monad m => String -> Validator m e a -> Validator m e a
-field f nested = object >>> hoistFnMV (\v ->
+field
+  :: forall m e a
+  . Monad m
+  => String
+  -> Validator m e a
+  -> Validators.Validator m (JsonError e) (Object Json) a
+field f nested = hoistFnMV (\v ->
   case lookup f v of
-    Nothing -> pure $ failure ("no field " <> show f <> " in object " <> show (stringify <$> v))
+    Nothing -> pure $
+      failure ("no field " <> show f <> " in object " <> show (stringify <$> v))
     Just j -> do
       res <- runValidator nested j
       pure $ lmap (extendErr f) res)
 
+-- | Possibly less efficient as object is parsed every time
+field' :: forall m e a. Monad m => String -> Validator m e a -> Validator m e a
+field' f nested = object >>> field f nested
+
 optionalField
   :: forall m e a
-   . Monad m
-  => Monoid a
-  => String -> Validator m e a -> Validator m e a
-optionalField f nested = object >>> hoistFnMV (\v ->
+  . Monad m
+  => String
+  -> Validator m e a
+  -> Validators.Validator m
+      (JsonError e)
+      (Object Json)
+      (Maybe a)
+optionalField f nested = hoistFnMV (\v ->
   case lookup f v of
-    Nothing -> pure $ pure mempty
+    Nothing -> pure (pure Nothing)
     Just j -> do
       res <- runValidator nested j
-      pure $ lmap (extendErr f) res)
+      pure $ map Just (lmap (extendErr f) res))
+
+optionalField'
+  :: forall m e a
+  . Monad m
+  => String
+  -> Validator m e a
+  -> Validator m e (Maybe a)
+optionalField' f nested = object >>> optionalField f nested
 
 array :: forall m e. Monad m => Validator m e (Array Json)
 array = hoistFnV $ \v ->

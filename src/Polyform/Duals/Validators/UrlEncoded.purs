@@ -48,9 +48,8 @@ query ∷ ∀ e m
   → Polyform.Dual.Dual
       (Polyform.Validator.Validator m (Errors e)) String Decoded
 query opts = dual
-  { parser: rmap Decoded (Validators.UrlEncoded.query opts)
-  , serializer
-  }
+  (rmap Decoded (Validators.UrlEncoded.query opts))
+  serializer
   where
     serializer ∷ Decoded → String
     serializer (Decoded m) =
@@ -74,42 +73,33 @@ type Dual m e a = Polyform.Dual.Dual
 
 boolean ∷ ∀ m. Monad m ⇒ FieldValueDual m Boolean
 boolean = dual
-  { parser: Validators.UrlEncoded.boolean
-  , serializer: if _ then Just ["on"] else Just ["off"]
-  }
+  Validators.UrlEncoded.boolean
+  (if _ then Just ["on"] else Just ["off"])
 
 string ∷ ∀ m. Monad m ⇒ FieldValueDual m String
-string = dual
-  { parser: Validators.UrlEncoded.string
-  , serializer: Just <<< Array.singleton
-  }
+string = dual Validators.UrlEncoded.string (Just <<< Array.singleton)
 
 number ∷ ∀ m. Monad m ⇒ FieldValueDual m Number
 number = dual
-  { parser: Validators.UrlEncoded.number
-  , serializer: Just <<< Array.singleton <<< Number.Format.toString
-  }
+  Validators.UrlEncoded.number
+  (Just <<< Array.singleton <<< Number.Format.toString)
 
 int ∷ ∀ m. Monad m ⇒ FieldValueDual m Int
 int = dual
-  { parser: Validators.UrlEncoded.int
-  , serializer: Just <<< Array.singleton <<< show
-  }
+  Validators.UrlEncoded.int
+  (Just <<< Array.singleton <<< show)
 
 array ∷ ∀ m. Monad m ⇒ FieldValueDual m (Array String)
 array = dual
-  { parser: Validators.UrlEncoded.array
-  , serializer: Just
-  }
+  Validators.UrlEncoded.array
+  Just
 
 optional ∷ ∀ a m. Monad m ⇒ FieldValueDual m a → FieldValueDual m (Maybe a)
 optional d = dual
-  { parser: Validators.UrlEncoded.optional (Dual.parser d)
-  , serializer: identity >=> Dual.serializer d
-  }
+  (Validators.UrlEncoded.optional (Dual.parser d))
+  (identity >=> Dual.serializer d)
 
 field ∷ ∀ a e m. Monad m ⇒ String → FieldValueDual m a → Dual m e a
 field name d = dual
-  { parser: lcmap unwrap $ Validators.UrlEncoded.field name (Dual.parser d)
-  , serializer: Dual.serializer d >>> fromMaybe [] >>> Map.singleton name >>> Decoded
-  }
+  (lcmap unwrap $ Validators.UrlEncoded.field name (Dual.parser d))
+  (Dual.serializer d >>> fromMaybe [] >>> Map.singleton name >>> Decoded)
