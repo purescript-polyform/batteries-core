@@ -12,8 +12,8 @@ module Polyform.Duals.Validators.Json
   , newtypeDual
   , object
   , field
-  , fieldProp
   , string
+  , sum
   , (:=)
   , variant
   )
@@ -43,10 +43,8 @@ import Polyform.Validator (Validator, hoistFn, hoistFnMV, hoistFnV, runValidator
 import Polyform.Validators (Errors) as Validators
 import Polyform.Validators.Json (JsonDecodingError, JsonError, extendErr, failure)
 import Polyform.Validators.Json (boolean, int, json, number, object, string) as Validators.Json
-import Prim.Row (class Cons)
 import Prim.Row (class Cons, class Lacks) as Row
 import Prim.RowList (class RowToList)
-import Record (get)
 import Type.Data.Symbol (SProxy)
 import Type.Prelude (class IsSymbol, reflectSymbol)
 
@@ -104,21 +102,10 @@ field label d =
           pure $ lmap (extendErr label) res
     ser = fieldSer >>> First >>> Foreign.singleton label
 
--- | Less efficient version which parses / serializes Json
--- | object to extract field value.
+-- | Less efficient version than `field` which parses/serializes JSON
+-- | object to operate on field value.
 field' :: forall m e a. Monad m => String -> JsonDual m e a -> JsonDual m e a
 field' label d = object >>> field label d
-
-
--- insert :: forall a e m r r' s
---   . IsSymbol s
---   => Cons s a r' r
---   => Monad m
---   => SProxy s
---   -> JsonDual m e a
---   -> DualD (Validator m (Validators.Errors (JsonError e))) (Object Json) { | r } a
-
---type Dual m e a b = Duals.Validator.Dual m (Validators.Errors e) a b
 
 insert ∷ ∀ e m l o prs prs' ser ser'
   . Row.Cons l o ser ser'
@@ -137,18 +124,6 @@ insert ∷ ∀ e m l o prs prs' ser ser'
     { | prs'}
 insert label dual =
   Dual.Record.insert label (field (reflectSymbol label) dual)
-
--- | The same `Symbol` is used for value lookup in JSON object
--- | and in parsed record value.
-fieldProp :: forall a e m r r' s
-  . IsSymbol s
-  => Cons s a r' r
-  => Monad m
-  => SProxy s
-  -> JsonDual m e a
-  -> DualD (Validator m (Validators.Errors (JsonError e))) (Object Json) { | r } a
-fieldProp label validator =
-  get label ~ field (reflectSymbol label) validator
 
 infix 10 insert as :=
 
