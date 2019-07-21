@@ -24,6 +24,7 @@ import Prelude
 import Data.Argonaut (Json, fromBoolean, fromNumber, fromObject, fromString, stringify) as Argonaut
 import Data.Argonaut (Json, stringify)
 import Data.Bifunctor (lmap)
+import Data.Generic.Rep (class Generic)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (class Newtype, unwrap, wrap)
@@ -33,9 +34,10 @@ import Foreign.Object (Object, lookup, singleton) as Foreign
 import Polyform.Dual (Dual(..), DualD(..)) as Dual
 import Polyform.Dual (DualD(..), dual, (~))
 import Polyform.Dual.Generic (class GDualVariant)
+import Polyform.Dual.Generic.Sum (class GDualSum)
 import Polyform.Dual.Record (RecordBuilder, insert) as Dual.Record
 import Polyform.Duals.Validator as Duals.Validator
-import Polyform.Duals.Validator.Generic (variant) as Duals.Validator.Generic
+import Polyform.Duals.Validator.Generic (sum, variant) as Duals.Validator.Generic
 import Polyform.Validator (Validator) as Polyform
 import Polyform.Validator (Validator, hoistFn, hoistFnMV, hoistFnV, runValidator, valid)
 import Polyform.Validators (Errors) as Validators
@@ -164,21 +166,29 @@ variant ∷
   { | d } →
   JsonDual m e (Variant v)
 variant = Duals.Validator.Generic.variant tagWithValue
-  where
-    tagWithValue ∷ ∀ a s. Monad m ⇒ IsSymbol s ⇒ SProxy s → JsonDual m e a → JsonDual m e a
-    tagWithValue fieldSymbol (Dual.Dual (Dual.DualD prs ser))  =
-      object >>> tagFields >>> tagged
-      where
-        tagFields = Dual.Dual $ { t: _, v: _ }
-          <$> _.t ~ field "tag" string
-          <*> _.v ~ field "value" identity
 
-        tagged =
-          let
-            fieldName = reflectSymbol fieldSymbol
-            ser' = ser >>> { t: fieldName, v: _ }
-            prs' = prs <<< hoistFnV \{ t, v } → if fieldName /= t
-              then failure ("Incorrect tag: " <> t)
-              else valid v
-          in
-            dual prs' ser'
+sum ∷ ∀ a m e rep r
+  . Monad m
+  ⇒ Generic a rep
+  ⇒ GDualSum (Validator m (Validators.Errors (JsonError e))) Argonaut.Json rep r
+  ⇒ { | r }
+  → JsonDual m e a
+sum = Duals.Validator.Generic.sum tagWithValue
+
+tagWithValue ∷ ∀ a e m s. Monad m ⇒ IsSymbol s ⇒ SProxy s → JsonDual m e a → JsonDual m e a
+tagWithValue fieldSymbol (Dual.Dual (Dual.DualD prs ser))  =
+  object >>> tagFields >>> tagged
+  where
+    tagFields = Dual.Dual $ { t: _, v: _ }
+      <$> _.t ~ field "tag" string
+      <*> _.v ~ field "value" identity
+
+    tagged =
+      let
+        fieldName = reflectSymbol fieldSymbol
+        ser' = ser >>> { t: fieldName, v: _ }
+        prs' = prs <<< hoistFnV \{ t, v } → if fieldName /= t
+          then failure ("Incorrect tag: " <> t)
+          else valid v
+      in
+        dual prs' ser'
