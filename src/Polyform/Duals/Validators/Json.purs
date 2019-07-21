@@ -5,6 +5,7 @@ module Polyform.Duals.Validators.Json
   , Object
   , boolean
   , int
+  , insert
   , json
   , number
   , mapDual
@@ -32,13 +33,16 @@ import Foreign.Object (Object, lookup, singleton) as Foreign
 import Polyform.Dual (Dual(..), DualD(..)) as Dual
 import Polyform.Dual (DualD(..), dual, (~))
 import Polyform.Dual.Generic (class GDualVariant)
+import Polyform.Dual.Record (RecordBuilder, insert) as Dual.Record
 import Polyform.Duals.Validator as Duals.Validator
 import Polyform.Duals.Validator.Generic (variant) as Duals.Validator.Generic
+import Polyform.Validator (Validator) as Polyform
 import Polyform.Validator (Validator, hoistFn, hoistFnMV, hoistFnV, runValidator, valid)
 import Polyform.Validators (Errors) as Validators
 import Polyform.Validators.Json (JsonDecodingError, JsonError, extendErr, failure)
 import Polyform.Validators.Json (boolean, int, json, number, object, string) as Validators.Json
 import Prim.Row (class Cons)
+import Prim.Row (class Cons, class Lacks) as Row
 import Prim.RowList (class RowToList)
 import Record (get)
 import Type.Data.Symbol (SProxy)
@@ -103,6 +107,35 @@ field label d =
 field' :: forall m e a. Monad m => String -> JsonDual m e a -> JsonDual m e a
 field' label d = object >>> field label d
 
+
+-- insert :: forall a e m r r' s
+--   . IsSymbol s
+--   => Cons s a r' r
+--   => Monad m
+--   => SProxy s
+--   -> JsonDual m e a
+--   -> DualD (Validator m (Validators.Errors (JsonError e))) (Object Json) { | r } a
+
+--type Dual m e a b = Duals.Validator.Dual m (Validators.Errors e) a b
+
+insert ∷ ∀ e m l o prs prs' ser ser'
+  . Row.Cons l o ser ser'
+  ⇒ Row.Lacks l ser
+  ⇒ Row.Cons l o prs prs'
+  ⇒ Row.Lacks l prs
+  ⇒ IsSymbol l
+  ⇒ Monad m
+  ⇒ SProxy l
+  → JsonDual m e o
+  → Dual.Record.RecordBuilder
+    (Polyform.Validator m (Validators.Errors (JsonError e)))
+    (Object Json)
+    { | ser'}
+    { | prs}
+    { | prs'}
+insert label dual =
+  Dual.Record.insert label (field (reflectSymbol label) dual)
+
 -- | The same `Symbol` is used for value lookup in JSON object
 -- | and in parsed record value.
 fieldProp :: forall a e m r r' s
@@ -115,7 +148,7 @@ fieldProp :: forall a e m r r' s
 fieldProp label validator =
   get label ~ field (reflectSymbol label) validator
 
-infix 7 fieldProp as :=
+infix 10 insert as :=
 
 newtypeDual :: forall a e m n. Monad m => Newtype n a => Dual m e a n
 newtypeDual = dual (hoistFn wrap) unwrap

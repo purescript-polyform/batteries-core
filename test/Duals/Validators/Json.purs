@@ -25,6 +25,7 @@ import Global.Unsafe (unsafeStringify)
 import Polyform.Dual (Dual(..)) as Dual
 import Polyform.Dual (DualD(..), dual, parser, serializer, (~))
 import Polyform.Dual.Generic (sum, variant) as Dual.Generic
+import Polyform.Dual.Record (build) as Dual.Record
 import Polyform.Dual.Validators.UrlEncoded as Dual.Validators.UrlEncoded
 import Polyform.Duals.Validators.Json (Dual, JsonDual, boolean, field, int, json, number, object, string, (:=))
 import Polyform.Validator (hoistFn, hoistFnMV, hoistFnV, runValidator, valid)
@@ -44,10 +45,10 @@ import Unsafe.Coerce (unsafeCoerce)
 obj ∷ ∀ e m. Monad m ⇒ JsonDual m e { foo ∷ Int, bar ∷ String, baz ∷ Number }
 obj = object >>> d
   where
-    d = Dual.Dual $ { foo: _, bar: _, baz: _ }
-      <$> (SProxy ∷ SProxy "foo") := int
-      <*> (SProxy ∷ SProxy "bar") := string
-      <*> (SProxy ∷ SProxy "baz") := number
+    d = Dual.Record.build
+      $ (SProxy ∷ SProxy "foo") := int
+      <<< (SProxy ∷ SProxy "bar") := string
+      <<< (SProxy ∷ SProxy "baz") := number
 
 suite =
   Test.Unit.suite "Test.Duals.Validators.Json" $ do
