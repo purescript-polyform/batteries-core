@@ -35,7 +35,7 @@ import Polyform.Dual (Dual(..), DualD(..)) as Dual
 import Polyform.Dual (DualD(..), dual, (~))
 import Polyform.Dual.Generic (class GDualVariant)
 import Polyform.Dual.Generic.Sum (class GDualSum)
-import Polyform.Dual.Record (RecordBuilder, insert) as Dual.Record
+import Polyform.Dual.Record (Builder, insert) as Dual.Record
 import Polyform.Duals.Validator as Duals.Validator
 import Polyform.Duals.Validator.Generic (sum, variant) as Duals.Validator.Generic
 import Polyform.Validator (Validator) as Polyform
@@ -116,7 +116,7 @@ insert ∷ ∀ e m l o prs prs' ser ser'
   ⇒ Monad m
   ⇒ SProxy l
   → JsonDual m e o
-  → Dual.Record.RecordBuilder
+  → Dual.Record.Builder
     (Polyform.Validator m (Validators.Errors (JsonError e)))
     (Object Json)
     { | ser'}
