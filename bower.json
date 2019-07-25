@@ -16,16 +16,16 @@
     "tests"
   ],
   "dependencies": {
-    "purescript-affjax": "",
-    "purescript-argonaut": "",
-    "purescript-numbers": "",
-    "purescript-polyform": "",
-    "purescript-prelude": "",
+    "purescript-affjax": "^9.0.0",
+    "purescript-argonaut": "^6.0.0",
+    "purescript-numbers": "^7.0.0",
+    "purescript-polyform": "^0.8.0",
+    "purescript-prelude": "^4.1.1",
     "purescript-record-extra": "https://github.com/justinwoo/purescript-record-extra.git#master"
   },
   "devDependencies": {
-    "purescript-console": "",
-    "purescript-test-unit": "",
-    "purescript-debug": ""
+    "purescript-console": "^4.2.0",
+    "purescript-test-unit": "^15.0.0",
+    "purescript-debug": "^4.0.0"
   }
 }

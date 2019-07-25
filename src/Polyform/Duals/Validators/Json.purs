@@ -8,8 +8,6 @@ module Polyform.Duals.Validators.Json
   , insert
   , json
   , number
-  , mapDual
-  , newtypeDual
   , object
   , field
   , string
@@ -27,7 +25,7 @@ import Data.Bifunctor (lmap)
 import Data.Generic.Rep (class Generic)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
-import Data.Newtype (class Newtype, unwrap, wrap)
+import Data.Newtype (unwrap)
 import Data.Semigroup.First (First(..))
 import Data.Variant (Variant)
 import Foreign.Object (Object, lookup, singleton) as Foreign
@@ -39,7 +37,7 @@ import Polyform.Dual.Record (Builder, insert) as Dual.Record
 import Polyform.Duals.Validator as Duals.Validator
 import Polyform.Duals.Validator.Generic (sum, variant) as Duals.Validator.Generic
 import Polyform.Validator (Validator) as Polyform
-import Polyform.Validator (Validator, hoistFn, hoistFnMV, hoistFnV, runValidator, valid)
+import Polyform.Validator (Validator, hoistFnMV, hoistFnV, runValidator, valid)
 import Polyform.Validators (Errors) as Validators
 import Polyform.Validators.Json (JsonDecodingError, JsonError, extendErr, failure)
 import Polyform.Validators.Json (boolean, int, json, number, object, string) as Validators.Json
@@ -127,12 +125,6 @@ insert label dual =
 
 infix 10 insert as :=
 
-newtypeDual :: forall a e m n. Monad m => Newtype n a => Dual m e a n
-newtypeDual = dual (hoistFn wrap) unwrap
-
-mapDual :: forall a b e m t. Monad m => Functor t => (a -> b) -> (b -> a) -> Dual m e (t a) (t b)
-mapDual f g = dual (hoistFn (map f)) (map g)
-
 variant ∷
   ∀ e d dl m v.
   Monad m ⇒
@@ -140,7 +132,7 @@ variant ∷
   GDualVariant (Validator m (Validators.Errors (JsonError e))) Argonaut.Json dl d v ⇒
   { | d } →
   JsonDual m e (Variant v)
-variant = Duals.Validator.Generic.variant tagWithValue
+variant = Duals.Validator.Generic.variant tagged
 
 sum ∷ ∀ a m e rep r
   . Monad m
@@ -148,17 +140,17 @@ sum ∷ ∀ a m e rep r
   ⇒ GDualSum (Validator m (Validators.Errors (JsonError e))) Argonaut.Json rep r
   ⇒ { | r }
   → JsonDual m e a
-sum = Duals.Validator.Generic.sum tagWithValue
+sum = Duals.Validator.Generic.sum tagged
 
-tagWithValue ∷ ∀ a e m s. Monad m ⇒ IsSymbol s ⇒ SProxy s → JsonDual m e a → JsonDual m e a
-tagWithValue fieldSymbol (Dual.Dual (Dual.DualD prs ser))  =
-  object >>> tagFields >>> tagged
+tagged ∷ ∀ a e m s. Monad m ⇒ IsSymbol s ⇒ SProxy s → JsonDual m e a → JsonDual m e a
+tagged fieldSymbol (Dual.Dual (Dual.DualD prs ser))  =
+  object >>> tagFields >>> tagged'
   where
     tagFields = Dual.Dual $ { t: _, v: _ }
       <$> _.t ~ field "tag" string
       <*> _.v ~ field "value" identity
 
-    tagged =
+    tagged' =
       let
         fieldName = reflectSymbol fieldSymbol
         ser' = ser >>> { t: fieldName, v: _ }
