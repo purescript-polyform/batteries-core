@@ -6,14 +6,14 @@ import Affjax (Response, ResponseFormatError, request, Request) as Affjax
 import Affjax.StatusCode (StatusCode(..))
 import Control.Monad.Error.Class (catchError)
 import Data.Argonaut (Json)
-import Data.Array (singleton)
 import Data.Either (Either(..))
 import Data.Functor.Variant (SProxy(..))
+import Data.Semigroup.First (First) as Semigroup
 import Data.Validation.Semigroup (V, invalid)
-import Data.Variant (inj)
+import Data.Variant (Variant, inj)
 import Effect.Aff (Aff)
+import Polyform.Validator (Validator) as Polyform
 import Polyform.Validator (hoistFn, hoistFnMV, hoistFnV)
-import Polyform.Validators (Validator)
 import Record (set)
 import Type.Row (type (+))
 
@@ -25,11 +25,13 @@ type ResponseFormatError (err :: # Type) =
 valid :: forall e a. Semigroup e => a -> V e a
 valid = pure
 
+type Error err = Semigroup.First (Variant (AffjaxError + ResponseFormatError + err))
+
 affjax
   :: forall a err
-   . Validator
+   . Polyform.Validator
       Aff
-      (AffjaxError + ResponseFormatError + err)
+      (Error err)
       (Affjax.Request a)
       (Affjax.Response a)
 affjax = hoistFnMV $ \req -> do
@@ -40,17 +42,17 @@ affjax = hoistFnMV $ \req -> do
         let
           response' = set (SProxy :: SProxy "body") err response
         in
-          invalid $ singleton $ (inj (SProxy :: SProxy "responseFormatError") response')
+          invalid $ pure $ (inj (SProxy :: SProxy "responseFormatError") response')
       Right a ->
         valid $ set (SProxy :: SProxy "body") a response
-    handleError e = pure (invalid $ singleton $ (inj (SProxy :: SProxy "remoteError") $ show e))
+    handleError e = pure (invalid $ pure $ (inj (SProxy :: SProxy "remoteError") $ show e))
 
 status
   :: forall m err res
    . Monad m
   => (StatusCode -> Boolean)
-  -> Validator m
-      (HttpError + err)
+  -> Polyform.Validator m
+      (Error (HttpError + err))
       (Affjax.Response res)
       (Affjax.Response res)
 status isCorrect = hoistFnV checkStatus
@@ -59,13 +61,13 @@ status isCorrect = hoistFnV checkStatus
       if isCorrect response.status then
         pure response
       else
-        invalid $ singleton $ (inj (SProxy :: SProxy "wrongHttpStatus") response.status)
+        invalid $ pure $ (inj (SProxy :: SProxy "wrongHttpStatus") response.status)
 
 body
   :: forall m err res
    . Monad m
-  => Validator m
-      (HttpError + err)
+  => Polyform.Validator m
+      (Error (HttpError + err))
       (Affjax.Response res)
       res
 body = hoistFn _.body
@@ -75,9 +77,9 @@ isStatusOK (StatusCode n) = (n == 200)
 
 affjaxJson
   :: forall errs
-   . Validator
+   . Polyform.Validator
       Aff
-      (HttpError + AffjaxError + ResponseFormatError + errs)
+      (Error (HttpError + AffjaxError + ResponseFormatError + errs))
       (Affjax.Request Json)
       Json
 affjaxJson = body <<< status isStatusOK <<< affjax

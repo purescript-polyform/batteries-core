@@ -3,45 +3,58 @@ module Polyform.Duals.Validators.Json
   , JsonDual
   , ObjectDual
   , Object
+  , argonaut
   , boolean
   , int
   , insert
   , json
+  , noArgs
   , number
   , object
+  , on
   , field
   , string
   , sum
-  , (:=)
+  , unit
   , variant
+  , (:=)
   )
   where
 
 import Prelude
 
+import Control.Alternative ((<|>))
 import Data.Argonaut (Json, fromBoolean, fromNumber, fromObject, fromString, stringify) as Argonaut
-import Data.Argonaut (Json, stringify)
+import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson, stringify)
+import Data.Argonaut.Core (jsonNull)
 import Data.Bifunctor (lmap)
-import Data.Generic.Rep (class Generic)
+import Data.Either (either)
+import Data.Generic.Rep (class Generic, NoArguments)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Data.Semigroup.First (First(..))
-import Data.Variant (Variant)
+import Data.Variant (Variant, inj)
+import Data.Variant (expand, on) as Variant
 import Foreign.Object (Object, lookup, singleton) as Foreign
+import Global.Unsafe (unsafeStringify)
+import Partial.Unsafe (unsafeCrashWith)
 import Polyform.Dual (Dual(..), DualD(..)) as Dual
 import Polyform.Dual (DualD(..), dual, (~))
 import Polyform.Dual.Generic (class GDualVariant)
 import Polyform.Dual.Generic.Sum (class GDualSum)
+import Polyform.Dual.Generic.Sum (noArgs', unit') as Dual.Generic.Sum
 import Polyform.Dual.Record (Builder, insert) as Dual.Record
+import Polyform.Dual.Variant (on) as Dual.Variant
 import Polyform.Duals.Validator as Duals.Validator
 import Polyform.Duals.Validator.Generic (sum, variant) as Duals.Validator.Generic
 import Polyform.Validator (Validator) as Polyform
-import Polyform.Validator (Validator, hoistFnMV, hoistFnV, runValidator, valid)
+import Polyform.Validator (Validator, hoistFn, hoistFnMV, hoistFnV, runValidator, valid)
 import Polyform.Validators (Errors) as Validators
 import Polyform.Validators.Json (JsonDecodingError, JsonError, extendErr, failure)
 import Polyform.Validators.Json (boolean, int, json, number, object, string) as Validators.Json
 import Prim.Row (class Cons, class Lacks) as Row
+import Prim.Row (class Union)
 import Prim.RowList (class RowToList)
 import Type.Data.Symbol (SProxy)
 import Type.Prelude (class IsSymbol, reflectSymbol)
@@ -52,6 +65,12 @@ json :: forall e m
 json = dual
   Validators.Json.json
   Argonaut.stringify
+
+argonaut ∷ ∀ a e m. Applicative m ⇒ EncodeJson a ⇒ DecodeJson a ⇒ JsonDual m e a
+argonaut = dual prs ser
+  where
+    prs = hoistFnV (\i → either failure pure (decodeJson i))
+    ser = encodeJson
 
 type Dual m e a b = Duals.Validator.Dual m (Validators.Errors e) a b
 type JsonDual m e a = Dual m (JsonError e) Argonaut.Json a
@@ -125,6 +144,37 @@ insert label dual =
 
 infix 10 insert as :=
 
+-- optionalField :: ∀ m e a. Monad m ⇒ String → JsonDual m e a → ObjectDual m e (Maybe a)
+-- optionalField =
+--   dual prs ser
+--   where
+--     DualD fieldPrs fieldSer = unwrap d
+--     prs = hoistFnMV \obj ->
+--       case Foreign.lookup label obj of
+--         Nothing -> pure $ failure ("no field " <> show label <> " in object " <> show ((stringify <<< unwrap) <$> obj))
+--         Just (First j) -> do
+--           res <- runValidator fieldPrs j
+--           pure $ lmap (extendErr label) res
+--     ser = fieldSer >>> First >>> Foreign.singleton label
+--
+-- insertOptional ∷ ∀ e m l o prs prs' ser ser'
+--   . Row.Cons l (Maybe o) ser ser'
+--   ⇒ Row.Lacks l ser
+--   ⇒ Row.Cons l (Maybe o) prs prs'
+--   ⇒ Row.Lacks l prs
+--   ⇒ IsSymbol l
+--   ⇒ Monad m
+--   ⇒ SProxy l
+--   → JsonDual m e o
+--   → Dual.Record.Builder
+--     (Polyform.Validator m (Validators.Errors (JsonError e)))
+--     (Object Json)
+--     { | ser'}
+--     { | prs}
+--     { | prs'}
+-- insertOptional label dual =
+--   Dual.Record.insert label (optionalField (reflectSymbol label) dual)
+
 variant ∷
   ∀ e d dl m v.
   Monad m ⇒
@@ -143,7 +193,7 @@ sum ∷ ∀ a m e rep r
 sum = Duals.Validator.Generic.sum tagged
 
 tagged ∷ ∀ a e m s. Monad m ⇒ IsSymbol s ⇒ SProxy s → JsonDual m e a → JsonDual m e a
-tagged fieldSymbol (Dual.Dual (Dual.DualD prs ser))  =
+tagged label (Dual.Dual (Dual.DualD prs ser))  =
   object >>> tagFields >>> tagged'
   where
     tagFields = Dual.Dual $ { t: _, v: _ }
@@ -152,10 +202,29 @@ tagged fieldSymbol (Dual.Dual (Dual.DualD prs ser))  =
 
     tagged' =
       let
-        fieldName = reflectSymbol fieldSymbol
+        fieldName = reflectSymbol label
         ser' = ser >>> { t: fieldName, v: _ }
         prs' = prs <<< hoistFnV \{ t, v } → if fieldName /= t
           then failure ("Incorrect tag: " <> t)
           else valid v
       in
         dual prs' ser'
+
+on ∷ ∀ a l lr e m r r'
+  . Union r lr r'
+  ⇒ IsSymbol l
+  ⇒ Row.Cons l a () lr
+  ⇒ Monad m
+  ⇒ Row.Cons l a r r'
+  ⇒ SProxy l
+  → JsonDual m e a
+  → JsonDual m e (Variant r)
+  → JsonDual m e (Variant r')
+on label d rest = Dual.Variant.on tagged label d rest
+
+noArgs ∷ ∀ e m. Monad m ⇒ JsonDual m e NoArguments
+noArgs = Dual.Generic.Sum.noArgs' jsonNull
+
+unit ∷ ∀ e m. Monad m ⇒ JsonDual m e Unit
+unit = Dual.Generic.Sum.unit' jsonNull
+

@@ -172,3 +172,4 @@ arrayOf :: forall m e a. Monad m => Validator m e a -> Validator m e (Array a)
 arrayOf v = array >>> hoistFnMV f
   where
     f = map sequence <<< traverse (runValidator v)
+
