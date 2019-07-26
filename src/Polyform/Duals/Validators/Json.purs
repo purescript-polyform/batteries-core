@@ -23,9 +23,8 @@ module Polyform.Duals.Validators.Json
 
 import Prelude
 
-import Control.Alternative ((<|>))
 import Data.Argonaut (Json, fromBoolean, fromNumber, fromObject, fromString, stringify) as Argonaut
-import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson, stringify)
+import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson, fromArray, stringify)
 import Data.Argonaut.Core (jsonNull)
 import Data.Bifunctor (lmap)
 import Data.Either (either)
@@ -34,11 +33,8 @@ import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
 import Data.Semigroup.First (First(..))
-import Data.Variant (Variant, inj)
-import Data.Variant (expand, on) as Variant
+import Data.Variant (Variant)
 import Foreign.Object (Object, lookup, singleton) as Foreign
-import Global.Unsafe (unsafeStringify)
-import Partial.Unsafe (unsafeCrashWith)
 import Polyform.Dual (Dual(..), DualD(..)) as Dual
 import Polyform.Dual (DualD(..), dual, (~))
 import Polyform.Dual.Generic (class GDualVariant)
@@ -49,10 +45,10 @@ import Polyform.Dual.Variant (on) as Dual.Variant
 import Polyform.Duals.Validator as Duals.Validator
 import Polyform.Duals.Validator.Generic (sum, variant) as Duals.Validator.Generic
 import Polyform.Validator (Validator) as Polyform
-import Polyform.Validator (Validator, hoistFn, hoistFnMV, hoistFnV, runValidator, valid)
+import Polyform.Validator (Validator, hoistFnMV, hoistFnV, runValidator, valid)
 import Polyform.Validators (Errors) as Validators
 import Polyform.Validators.Json (JsonDecodingError, JsonError, extendErr, failure)
-import Polyform.Validators.Json (boolean, int, json, number, object, string) as Validators.Json
+import Polyform.Validators.Json (arrayOf, boolean, int, json, number, object, string) as Validators.Json
 import Prim.Row (class Cons, class Lacks) as Row
 import Prim.Row (class Union)
 import Prim.RowList (class RowToList)
@@ -103,6 +99,10 @@ string :: forall m e. Monad m => JsonDual m e String
 string = dual
   Validators.Json.string
   Argonaut.fromString
+
+arrayOf ∷ ∀ m e o. Monad m ⇒ JsonDual m e o → JsonDual m e (Array o)
+arrayOf (Dual.Dual (Dual.DualD prs ser)) =
+  dual (Validators.Json.arrayOf prs) (fromArray <<< map ser)
 
 type ObjectDual m e a = Dual m (JsonError e) (Object Argonaut.Json) a
 
