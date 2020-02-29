@@ -4,7 +4,10 @@ module Polyform.Duals.Validators.Json
   , ObjectDual
   , Object
   , argonaut
+  , arrayOf
   , boolean
+  , decode
+  , encode
   , int
   , insert
   , json
@@ -18,6 +21,7 @@ module Polyform.Duals.Validators.Json
   , unit
   , variant
   , (:=)
+  , (:>)
   )
   where
 
@@ -27,8 +31,9 @@ import Data.Argonaut (Json, fromBoolean, fromNumber, fromObject, fromString, str
 import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson, fromArray, stringify)
 import Data.Argonaut.Core (jsonNull)
 import Data.Bifunctor (lmap)
-import Data.Either (either)
+import Data.Either (Either, either)
 import Data.Generic.Rep (class Generic, NoArguments)
+import Data.Identity (Identity)
 import Data.Int (toNumber)
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
@@ -50,10 +55,10 @@ import Polyform.Validators (Errors) as Validators
 import Polyform.Validators.Json (JsonDecodingError, JsonError, extendErr, failure)
 import Polyform.Validators.Json (arrayOf, boolean, int, json, number, object, string) as Validators.Json
 import Prim.Row (class Cons, class Lacks) as Row
-import Prim.Row (class Union)
 import Prim.RowList (class RowToList)
 import Type.Data.Symbol (SProxy)
 import Type.Prelude (class IsSymbol, reflectSymbol)
+import Type.Row (type (+))
 
 json :: forall e m
    . Monad m
@@ -210,10 +215,8 @@ tagged label (Dual.Dual (Dual.DualD prs ser))  =
       in
         dual prs' ser'
 
-on ∷ ∀ a l lr e m r r'
-  . Union r lr r'
-  ⇒ IsSymbol l
-  ⇒ Row.Cons l a () lr
+on ∷ ∀ a l e m r r'
+  . IsSymbol l
   ⇒ Monad m
   ⇒ Row.Cons l a r r'
   ⇒ SProxy l
@@ -222,9 +225,17 @@ on ∷ ∀ a l lr e m r r'
   → JsonDual m e (Variant r')
 on label d rest = Dual.Variant.on tagged label d rest
 
+infix 10 on as :>
+
 noArgs ∷ ∀ e m. Monad m ⇒ JsonDual m e NoArguments
 noArgs = Dual.Generic.Sum.noArgs' jsonNull
 
 unit ∷ ∀ e m. Monad m ⇒ JsonDual m e Unit
 unit = Dual.Generic.Sum.unit' jsonNull
 
+decode ∷ ∀ a e. JsonDual Identity e a → Json → Either (Validators.Errors (JsonError + e)) a
+decode dual j =
+  unwrap $ unwrap (Duals.Validator.runValidator dual j)
+
+encode ∷ ∀ a e. JsonDual Identity e a → a → Json
+encode dual a = Duals.Validator.runSerializer dual a

@@ -9,6 +9,7 @@ import Data.Argonaut.Core (Json)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Int (toNumber)
+import Data.List (List(..)) as List
 import Data.Map as Map
 import Data.Maybe (Maybe(..))
 import Data.Newtype (unwrap)
@@ -16,7 +17,6 @@ import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
 import Data.Validation.Semigroup (invalid, unV)
 import Data.Variant (Variant, inj, match, onMatch)
-import Debug.Trace (traceM)
 import Effect (Effect)
 import Effect.Aff (Aff)
 import Effect.Class.Console (log)
@@ -26,7 +26,8 @@ import Polyform.Dual (DualD(..), dual, parser, serializer, (~))
 import Polyform.Dual.Record (build) as Dual.Record
 import Polyform.Dual.Validators.UrlEncoded as Dual.Validators.UrlEncoded
 import Polyform.Dual.Variant (case_)
-import Polyform.Duals.Validators.Json (Dual, JsonDual, boolean, field, int, json, noArgs, number, object, on, string, sum, unit, (:=))
+import Polyform.Duals.Validator (runSerializerM)
+import Polyform.Duals.Validators.Json (Dual, JsonDual, arrayOf, boolean, field, int, json, noArgs, number, object, on, string, sum, unit, (:=))
 import Polyform.Validator (hoistFn, hoistFnMV, hoistFnV, runValidator, valid)
 import Polyform.Validators.Json (JsonError, Validator)
 import Polyform.Validators.Json (Validator, JsonDecodingError, failure, jsType) as Json
@@ -93,6 +94,7 @@ suite =
               $ (SProxy ∷ SProxy "foo") := int
               <<< (SProxy ∷ SProxy "bar") := string
               <<< (SProxy ∷ SProxy "baz") := number
+        objs = arrayOf obj
 
       test "Parse object" $ do
         let
@@ -103,6 +105,7 @@ suite =
             ]
           expected = { foo: 8, bar: "test", baz: 8.0 }
         parsed ← runValidator (parser obj) input
+        void $ runSerializerM objs []
         unV
           (const $ failure "Validation failed")
           (_ `equal` expected)
@@ -114,7 +117,7 @@ suite =
           sumD ∷
             ∀ e m.
             Monad m ⇒
-            JsonDual m e Sum
+            JsonDual m () Sum
           sumD = sum
             { "S": identity string
             , "I": identity int
@@ -157,3 +160,23 @@ suite =
           (const $ failure "Validation failed")
           (_ `equal` (U Prelude.unit))
           parsedU
+
+        let
+          s' = fromObject $ Object.fromFoldable
+            [ "tag" /\ fromString "S", "value" /\ fromNumber 8.0 ]
+          _json = SProxy ∷ SProxy "json"
+          errs =
+            [ inj _json { msg: "number is not a string", path: List.Nil }
+            , inj _json { msg: "Incorrect tag: S", path: List.Nil }
+            , inj _json { msg: "Incorrect tag: S", path: List.Nil }
+            , inj _json { msg: "Incorrect tag: S", path: List.Nil }
+            , inj _json { msg: "Incorrect tag: S", path: List.Nil }
+            , inj _json { msg: "Incorrect tag: S", path: List.Nil }
+            ]
+        parsedS' ← runValidator (parser sumD) s'
+
+
+        unV
+          (_ `equal` errs)
+          (const $ failure "Expecting validation failure")
+          parsedS'

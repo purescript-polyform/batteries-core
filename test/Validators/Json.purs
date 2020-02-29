@@ -2,8 +2,8 @@ module Test.Validators.Json where
 
 import Prelude
 
+import Data.Argonaut (fromArray, fromBoolean, fromNumber, fromObject, fromString, stringify, toObject)
 import Data.Argonaut (fromBoolean, fromNumber) as Argonaut
-import Data.Argonaut (fromBoolean, fromNumber, fromObject, fromString, stringify, toObject)
 import Data.Argonaut (fromString, stringify) as Argounaut
 import Data.Argonaut.Core (Json)
 import Data.Generic.Rep (class Generic)
@@ -26,7 +26,7 @@ import Polyform.Dual (Dual(..), DualD(..), dual, serializer, (~))
 import Polyform.Dual.Generic (sum, variant) as Dual.Generic
 import Polyform.Dual.Validators.UrlEncoded as Dual.Validators.UrlEncoded
 import Polyform.Validator (hoistFn, hoistFnMV, hoistFnV, runValidator, valid)
-import Polyform.Validators.Json (JsonError, Validator, field, int, number, object, string)
+import Polyform.Validators.Json (JsonError, Validator, arrayOf, field, int, number, object, string)
 import Polyform.Validators.Json (Validator, JsonDecodingError, boolean, failure, field, int, jsType, json, string) as Json
 import Polyform.Validators.UrlEncoded as UrlEncoded
 import Record.Extra (sequenceRecord)
