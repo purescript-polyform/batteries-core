@@ -1,31 +1,26 @@
 {
-  "name": "purescript-polyform-validators",
-  "description": "Set of useful validators on top of purescript-polyform",
-  "license": "BSD-3-Clause",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/lambdaterms/purescript-polyform-validators.git"
-  },
-  "homepage": "https://github.com/lambdaterms/purescript-polyform-validators",
-  "ignore": [
-    "**/.*",
-    "node_modules",
-    "bower_components",
-    "output",
-    "test",
-    "tests"
-  ],
-  "dependencies": {
-    "purescript-affjax": "^9.0.0",
-    "purescript-argonaut": "^6.0.0",
-    "purescript-numbers": "^7.0.0",
-    "purescript-polyform": "^0.8.0",
-    "purescript-prelude": "^4.1.1",
-    "purescript-record-extra": "https://github.com/justinwoo/purescript-record-extra.git#master"
-  },
-  "devDependencies": {
-    "purescript-console": "^4.2.0",
-    "purescript-test-unit": "^15.0.0",
-    "purescript-debug": "^4.0.0"
-  }
+    "name": "purescript-polyform-validators",
+    "license": [
+        "BSD-3-Clause"
+    ],
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/lambdaterms/purescript-polyform-validators.git"
+    },
+    "ignore": [
+        "**/.*",
+        "node_modules",
+        "bower_components",
+        "output"
+    ],
+    "dependencies": {
+        "purescript-affjax": "^v10.0.0",
+        "purescript-argonaut": "^v6.0.0",
+        "purescript-debug": "^v4.0.0",
+        "purescript-numbers": "^v7.0.0",
+        "purescript-polyform": "https://github.com/paluh/purescript-polyform.git#38c17d1f0602f04252e144117cef3567063b406e",
+        "purescript-prelude": "^v4.1.1",
+        "purescript-record-extra": "^v3.0.1",
+        "purescript-test-unit": "^v15.0.0"
+    }
 }
