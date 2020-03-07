@@ -18,7 +18,7 @@
         "purescript-argonaut": "^v6.0.0",
         "purescript-debug": "^v4.0.0",
         "purescript-numbers": "^v7.0.0",
-        "purescript-polyform": "https://github.com/paluh/purescript-polyform.git#38c17d1f0602f04252e144117cef3567063b406e",
+        "purescript-polyform": "^v0.8.2",
         "purescript-prelude": "^v4.1.1",
         "purescript-record-extra": "^v3.0.1",
         "purescript-test-unit": "^v15.0.0"
