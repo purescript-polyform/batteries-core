@@ -2,9 +2,8 @@ module Polyform.Validators.Affjax where
 
 import Prelude
 
-import Affjax (Response, ResponseFormatError, request, Request) as Affjax
+import Affjax (Error(..), Response, request, Request) as Affjax
 import Affjax.StatusCode (StatusCode(..))
-import Control.Monad.Error.Class (catchError)
 import Data.Argonaut (Json)
 import Data.Either (Either(..))
 import Data.Functor.Variant (SProxy(..))
@@ -12,15 +11,14 @@ import Data.Semigroup.First (First) as Semigroup
 import Data.Validation.Semigroup (V, invalid)
 import Data.Variant (Variant, inj)
 import Effect.Aff (Aff)
+import Global.Unsafe (unsafeStringify)
 import Polyform.Validator (Validator) as Polyform
 import Polyform.Validator (hoistFn, hoistFnMV, hoistFnV)
-import Record (set)
 import Type.Row (type (+))
 
 type HttpError (err :: # Type) = (wrongHttpStatus :: StatusCode | err)
 type AffjaxError (err :: # Type) = (remoteError :: String | err)
-type ResponseFormatError (err :: # Type) =
-  (responseFormatError :: Affjax.Response Affjax.ResponseFormatError | err)
+type ResponseFormatError (err :: # Type) = (responseFormatError :: String | err)
 
 valid :: forall e a. Semigroup e => a -> V e a
 valid = pure
@@ -35,17 +33,17 @@ affjax
       (Affjax.Request a)
       (Affjax.Response a)
 affjax = hoistFnMV $ \req -> do
-  (handleResponse <$> Affjax.request req) `catchError` handleError
+  (handleResponse <$> Affjax.request req)
   where
-    handleResponse response = case response.body of
-      Left err ->
-        let
-          response' = set (SProxy :: SProxy "body") err response
-        in
-          invalid $ pure $ (inj (SProxy :: SProxy "responseFormatError") response')
-      Right a ->
-        valid $ set (SProxy :: SProxy "body") a response
-    handleError e = pure (invalid $ pure $ (inj (SProxy :: SProxy "remoteError") $ show e))
+    handleResponse = case _ of
+      Left (Affjax.RequestContentError s) →
+        invalid $ pure $ (inj (SProxy :: SProxy "responseFormatError") s)
+      Left (Affjax.ResponseBodyError err response) →
+        invalid $ pure $ (inj (SProxy :: SProxy "responseFormatError") (unsafeStringify err <> unsafeStringify response))
+      Left (Affjax.XHRError e) →
+        invalid $ pure $ (inj (SProxy :: SProxy "remoteError") $ show e)
+      Right response ->
+        valid $ response
 
 status
   :: forall m err res
