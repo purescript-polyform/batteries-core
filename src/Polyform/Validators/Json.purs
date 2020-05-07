@@ -6,9 +6,11 @@ module Polyform.Validators.Json
   , arrayOf
   , boolean
   , elem
+  , err
   , extendErr
   , failure
   , field
+  , hoistFnMaybe
   , number
   , int
   , json
@@ -23,6 +25,7 @@ import Prelude
 
 import Data.Argonaut (Json, caseJson, jsonParser, stringify, toArray, toBoolean, toNumber, toObject, toString)
 import Data.Array ((!!))
+import Data.Array (singleton) as Array
 import Data.Bifunctor (lmap)
 import Data.Either (Either(..))
 import Data.Functor (mapFlipped)
@@ -35,6 +38,7 @@ import Data.Validation.Semigroup (V, invalid)
 import Data.Variant (inj, prj)
 import Foreign.Object (Object, lookup)
 import Polyform.Validator (hoistFnMV, hoistFnV, runValidator)
+import Polyform.Validator (hoistFnMaybe) as Polyform.Validator
 import Polyform.Validators (Errors, fail)
 import Polyform.Validators (Validator) as Validators
 
@@ -69,8 +73,18 @@ jsType = caseJson
 
 _json = SProxy :: SProxy "json"
 
+err :: forall e. String -> Errors (JsonError e)
+err msg = Array.singleton (inj _json { path: Nil, msg: msg })
+
 failure :: forall e a. String -> V (Errors (JsonError e)) a
 failure msg = fail $ inj _json { path: Nil, msg: msg }
+
+-- noteV :: forall e a. String -> Maybe a -> V (Errors (JsonError e)) a
+-- noteV msg Nothing = failure msg
+-- noteV _ (Just a) = pure a
+
+hoistFnMaybe :: forall a e m. Applicative m => String -> (Json -> Maybe a) -> Validator m e a
+hoistFnMaybe msg f = Polyform.Validator.hoistFnMaybe (err msg) f
 
 extendErrPath
   :: String

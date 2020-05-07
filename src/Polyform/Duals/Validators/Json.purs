@@ -6,6 +6,7 @@ module Polyform.Duals.Validators.Json
   , argonaut
   , arrayOf
   , boolean
+  , constField
   , decode
   , encode
   , int
@@ -29,7 +30,7 @@ import Prelude
 
 import Data.Argonaut (Json, fromBoolean, fromNumber, fromObject, fromString, stringify) as Argonaut
 import Data.Argonaut (class DecodeJson, class EncodeJson, Json, decodeJson, encodeJson, fromArray, stringify)
-import Data.Argonaut.Core (jsonNull)
+import Data.Argonaut.Core (isNull, jsonNull)
 import Data.Bifunctor (lmap)
 import Data.Either (Either, either)
 import Data.Generic.Rep (class Generic, NoArguments)
@@ -111,6 +112,9 @@ arrayOf (Dual.Dual (Dual.DualD prs ser)) =
 
 type ObjectDual m e a = Dual m (JsonError e) (Object Argonaut.Json) a
 
+-- | This `First` wrapper is necessary because `Object` provides
+-- | `Semigroup` instance which based on value `Semigroup`.
+-- | We use just left bias union here.
 field :: forall m e a. Monad m => String -> JsonDual m e a -> ObjectDual m e a
 field label d =
   dual prs ser
@@ -125,7 +129,7 @@ field label d =
     ser = fieldSer >>> First >>> Foreign.singleton label
 
 -- | Less efficient version than `field` which parses/serializes JSON
--- | object to operate on field value.
+-- | object to operate on a field value.
 field' :: forall m e a. Monad m => String -> JsonDual m e a -> JsonDual m e a
 field' label d = object >>> field label d
 
@@ -148,6 +152,33 @@ insert label dual =
   Dual.Record.insert label (field (reflectSymbol label) dual)
 
 infix 10 insert as :=
+
+-- | TODO:
+-- | * alias signature types
+constField ∷ ∀ e m l o prs prs' ser ser'
+  . Row.Cons l o ser ser'
+  ⇒ Row.Lacks l ser
+  ⇒ Row.Cons l o prs prs'
+  ⇒ Row.Lacks l prs
+  ⇒ IsSymbol l
+  ⇒ Monad m
+  ⇒ SProxy l
+  → o
+  → Dual.Record.Builder
+    (Polyform.Validator m (Validators.Errors (JsonError e)))
+    (Object Json)
+    { | ser'}
+    { | prs}
+    { | prs'}
+constField label a = label := (dual prs ser)
+  where
+    ser = const jsonNull
+    -- | Do we want to really validate this??
+    prs = hoistFnMV $ \i → pure (valid a)
+      -- if isNull i
+      -- then pure (valid a)
+      -- else pure $
+      --   failure ("expecting null value as constant encoding")
 
 -- optionalField :: ∀ m e a. Monad m ⇒ String → JsonDual m e a → ObjectDual m e (Maybe a)
 -- optionalField =
@@ -239,3 +270,4 @@ decode dual j =
 
 encode ∷ ∀ a e. JsonDual Identity e a → a → Json
 encode dual a = Duals.Validator.runSerializer dual a
+

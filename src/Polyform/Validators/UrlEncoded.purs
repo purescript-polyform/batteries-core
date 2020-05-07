@@ -21,14 +21,15 @@ import Data.Int as Int
 import Data.Map (lookup) as Map
 import Data.Maybe (Maybe(..))
 import Data.Number as Number
-import Data.Validation.Semigroup (invalid)
+import Data.Validation.Semigroup (V)
+import Data.Validation.Semigroup (invalid) as Validation.Semigroup
 import Data.Variant (inj)
 import Polyform.Validator (hoistFn, hoistFnEither, hoistFnMV, hoistFnV, runValidator)
 import Polyform.Validator as Polyform.Validator
 import Polyform.Validators (Errors)
 import Polyform.Validators.UrlEncoded.Parser (Options) as Parser
 import Polyform.Validators.UrlEncoded.Parser (parse)
-import Polyform.Validators.UrlEncoded.Types (Decoded, Error, Validator, _urlDecoding, _urlValueParsing) as Types
+import Polyform.Validators.UrlEncoded.Types (Decoded, Error, _urlDecoding, _urlValueParsing, Value, Validator) as Types
 
 -- | This module provides validators for urlencoded values.
 -- | In general it follows "browsers standard" for encoding
@@ -40,7 +41,10 @@ query :: forall m e. Monad m => Parser.Options -> Types.Validator m e String Typ
 query opts = hoistFnEither (lmap (Array.singleton <<< inj Types._urlDecoding) <<< parse opts)
 
 -- | `String` error is transformed into `Types.Error` in "form" level validators
-type FieldValueValidator m a = Polyform.Validator.Validator m String (Maybe (Array String)) a
+type FieldValueValidator m a = Polyform.Validator.Validator m (Array String) (Maybe (Array String)) a
+
+invalid :: forall a. String -> V (Array String) a
+invalid = Validation.Semigroup.invalid <<< Array.singleton
 
 -- | Encodes default browser behavior which sets `checkbox` value to "on"
 -- | when checked and skips it completely when it is not.
@@ -88,6 +92,6 @@ field name validator =
     result ← runValidator validator input
     pure $ lmap (failure input) result
   where
-  failure :: (Maybe (Array String)) -> String -> Errors (Types.Error e)
+  failure :: (Maybe (Array String)) -> Array String -> Errors (Types.Error e)
   failure input error = [ inj Types._urlValueParsing { error, field: name, input } ]
 

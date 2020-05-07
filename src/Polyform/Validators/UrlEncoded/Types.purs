@@ -8,7 +8,7 @@ import Type.Prelude (SProxy(..))
 type Error e =
   ( urlDecoding :: String
   , urlValueParsing ::
-      { error :: String
+      { error :: Array String
       , field :: String
       , input :: Maybe (Array String)
       }

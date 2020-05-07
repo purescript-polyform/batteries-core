@@ -67,7 +67,7 @@ instance monoidDecoded ∷ Monoid Decoded where
   mempty = Decoded mempty
 
 type Errors e = Polyform.Validators.Errors (Validators.UrlEncoded.Error + e)
-type FieldValueDual m a = Polyform.Dual.Dual (Polyform.Validator.Validator m String) (Maybe (Array String)) a
+type FieldValueDual m a = Polyform.Dual.Dual (Polyform.Validator.Validator m (Array String)) (Maybe (Array String)) a
 type Dual m e a = Polyform.Dual.Dual
   (Polyform.Validator.Validator m (Errors e)) Decoded a
 
