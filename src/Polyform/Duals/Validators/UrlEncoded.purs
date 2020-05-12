@@ -42,18 +42,19 @@ newtype Decoded = Decoded Validators.UrlEncoded.Decoded
 derive instance newtypeDecoded ∷ Newtype Decoded _
 derive newtype instance eqDecoded ∷ Eq Decoded
 
-query ∷ ∀ e m
+query ∷ ∀ e m s
   . Monad m
+  ⇒ Applicative s
   ⇒ Validators.UrlEncoded.Parser.Options
   → Polyform.Dual.Dual
-      (Polyform.Validator.Validator m (Errors e)) String Decoded
+      (Polyform.Validator.Validator m (Errors e)) s String Decoded
 query opts = dual
   (rmap Decoded (Validators.UrlEncoded.query opts))
   serializer
   where
-    serializer ∷ Decoded → String
+    serializer ∷ Decoded → s String
     serializer (Decoded m) =
-      String.joinWith "&" $ Array.fromFoldable $ foldrWithIndex step mempty m
+      pure $ String.joinWith "&" $ Array.fromFoldable $ foldrWithIndex step mempty m
       where
         step key values q =
           foldr (substep key) mempty values <> q
@@ -67,39 +68,41 @@ instance monoidDecoded ∷ Monoid Decoded where
   mempty = Decoded mempty
 
 type Errors e = Polyform.Validators.Errors (Validators.UrlEncoded.Error + e)
-type FieldValueDual m a = Polyform.Dual.Dual (Polyform.Validator.Validator m (Array String)) (Maybe (Array String)) a
-type Dual m e a = Polyform.Dual.Dual
-  (Polyform.Validator.Validator m (Errors e)) Decoded a
+type FieldValueDual m s a = Polyform.Dual.Dual (Polyform.Validator.Validator m (Array String)) s (Maybe (Array String)) a
+type Dual m s e a = Polyform.Dual.Dual
+  (Polyform.Validator.Validator m (Errors e)) s Decoded a
 
-boolean ∷ ∀ m. Monad m ⇒ FieldValueDual m Boolean
+boolean ∷ ∀ m s. Monad m ⇒ Applicative s ⇒ FieldValueDual m s Boolean
 boolean = dual
   Validators.UrlEncoded.boolean
-  (if _ then Just ["on"] else Just ["off"])
+  (pure <<< if _ then Just ["on"] else Just ["off"])
 
-string ∷ ∀ m. Monad m ⇒ FieldValueDual m String
-string = dual Validators.UrlEncoded.string (Just <<< Array.singleton)
+string ∷ ∀ m s. Monad m ⇒ Applicative s ⇒ FieldValueDual m s String
+string = dual Validators.UrlEncoded.string (pure <<< Just <<< Array.singleton)
 
-number ∷ ∀ m. Monad m ⇒ FieldValueDual m Number
+number ∷ ∀ m s. Monad m ⇒ Applicative s ⇒ FieldValueDual m s Number
 number = dual
   Validators.UrlEncoded.number
-  (Just <<< Array.singleton <<< Number.Format.toString)
+  (pure <<< Just <<< Array.singleton <<< Number.Format.toString)
 
-int ∷ ∀ m. Monad m ⇒ FieldValueDual m Int
+int ∷ ∀ m s. Monad m ⇒ Applicative s ⇒ FieldValueDual m s Int
 int = dual
   Validators.UrlEncoded.int
-  (Just <<< Array.singleton <<< show)
+  (pure <<< Just <<< Array.singleton <<< show)
 
-array ∷ ∀ m. Monad m ⇒ FieldValueDual m (Array String)
+array ∷ ∀ m s. Monad m ⇒ Applicative s ⇒ FieldValueDual m s (Array String)
 array = dual
   Validators.UrlEncoded.array
-  Just
+  (pure <<< Just)
 
-optional ∷ ∀ a m. Monad m ⇒ FieldValueDual m a → FieldValueDual m (Maybe a)
+optional ∷ ∀ a m s. Monad m ⇒ Applicative s ⇒ FieldValueDual m s a → FieldValueDual m s (Maybe a)
 optional d = dual
   (Validators.UrlEncoded.optional (Dual.parser d))
-  (identity >=> Dual.serializer d)
+  (case _ of
+    Just a → Dual.serializer d a
+    Nothing → pure Nothing)
 
-field ∷ ∀ a e m. Monad m ⇒ String → FieldValueDual m a → Dual m e a
+field ∷ ∀ a e m s. Monad m ⇒ Applicative s ⇒ String → FieldValueDual m s a → Dual m s e a
 field name d = dual
   (lcmap unwrap $ Validators.UrlEncoded.field name (Dual.parser d))
-  (Dual.serializer d >>> fromMaybe [] >>> Map.singleton name >>> Decoded)
+  (Dual.serializer d >>> map (fromMaybe [] >>> Map.singleton name >>> Decoded))

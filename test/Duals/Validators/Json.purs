@@ -8,6 +8,7 @@ import Data.Argonaut (fromString, stringify) as Argounaut
 import Data.Argonaut.Core (Json)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
+import Data.Identity (Identity(..))
 import Data.Int (toNumber)
 import Data.List (List(..)) as List
 import Data.Map as Map
@@ -26,7 +27,7 @@ import Polyform.Dual (DualD(..), dual, parser, serializer, (~))
 import Polyform.Dual.Record (build) as Dual.Record
 import Polyform.Dual.Validators.UrlEncoded as Dual.Validators.UrlEncoded
 import Polyform.Dual.Variant (case_)
-import Polyform.Duals.Validator (runSerializerM)
+import Polyform.Duals.Validator (runSerializer, runSerializerM)
 import Polyform.Duals.Validators.Json (Dual, JsonDual, arrayOf, boolean, field, int, json, noArgs, number, object, on, string, sum, unit, (:=))
 import Polyform.Validator (hoistFn, hoistFnMV, hoistFnV, runValidator, valid)
 import Polyform.Validators.Json (JsonError, Validator)
@@ -87,7 +88,7 @@ suite =
 
     Test.Unit.suite "record handling" $ do
       let
-        obj ∷ ∀ e m. Monad m ⇒ JsonDual m e { foo ∷ Int, bar ∷ String, baz ∷ Number }
+        obj ∷ ∀ e. JsonDual Aff Identity e { foo ∷ Int, bar ∷ String, baz ∷ Number }
         obj = object >>> d
           where
             d = Dual.Record.build
@@ -105,7 +106,7 @@ suite =
             ]
           expected = { foo: 8, bar: "test", baz: 8.0 }
         parsed ← runValidator (parser obj) input
-        void $ runSerializerM objs []
+        -- void $ runSerializer objs []
         unV
           (const $ failure "Validation failed")
           (_ `equal` expected)
@@ -115,9 +116,8 @@ suite =
       test "through generic helper" $ do
         let
           sumD ∷
-            ∀ e m.
-            Monad m ⇒
-            JsonDual m () Sum
+            ∀ e m s.
+            JsonDual Aff Identity () Sum
           sumD = sum
             { "S": identity string
             , "I": identity int
@@ -174,7 +174,6 @@ suite =
             , inj _json { msg: "Incorrect tag: S", path: List.Nil }
             ]
         parsedS' ← runValidator (parser sumD) s'
-
 
         unV
           (_ `equal` errs)
