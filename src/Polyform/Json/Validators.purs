@@ -1,4 +1,4 @@
-module Polyform.Validators.Json
+module Polyform.Json.Validators
   ( JsonError
   , JsonDecodingError
   , Validator
@@ -84,7 +84,7 @@ failure msg = fail $ inj _json { path: Nil, msg: msg }
 -- noteV _ (Just a) = pure a
 
 hoistFnMaybe :: forall a e m. Applicative m => String -> (Json -> Maybe a) -> Validator m e a
-hoistFnMaybe msg f = Polyform.Validator.hoistFnMaybe (err msg) f
+hoistFnMaybe msg f = Polyform.Validator.hoistFnMaybe f (const $ err msg)
 
 extendErrPath
   :: String

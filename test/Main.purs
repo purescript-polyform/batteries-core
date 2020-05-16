@@ -3,14 +3,14 @@ module Test.Main where
 import Prelude
 
 import Effect (Effect)
-import Test.Duals.Validators.Json (suite) as Test.Duals.Validators.Json
 import Test.Unit.Main (runTest)
-import Test.Validators.Json (suite) as Test.Validators.Json
+import Test.Polyform.Json.Validators (suite) as Test.Polyform.Json.Validators
+import Test.Polyform.Json.Validators.Duals (suite) as Test.Polyform.Json.Validators.Duals
 
 main ∷ Effect Unit
 main = runTest $ do
-  Test.Validators.Json.suite
-  Test.Duals.Validators.Json.suite
+  Test.Polyform.Json.Validators.suite
+  Test.Polyform.Json.Validators.Duals.suite
 
 -- import Data.Argonaut (fromBoolean, fromNumber) as Argonaut
 -- import Data.Argonaut (fromBoolean, fromNumber, fromObject, fromString, stringify, toObject)

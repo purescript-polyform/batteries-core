@@ -1,4 +1,4 @@
-module Polyform.Validators.UrlEncoded.Types where
+module Polyform.UrlEncoded.Types where
 
 import Data.Map (Map)
 import Data.Maybe (Maybe)

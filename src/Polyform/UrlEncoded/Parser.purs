@@ -1,4 +1,4 @@
-module Polyform.Validators.UrlEncoded.Parser where
+module Polyform.UrlEncoded.Parser where
 
 import Prelude
 
@@ -13,7 +13,7 @@ import Data.Nullable (Nullable, toMaybe)
 import Data.String (Pattern(..), Replacement(..), joinWith, replaceAll, split)
 import Data.Traversable (sequence)
 import Data.Tuple (Tuple(..), fst)
-import Polyform.Validators.UrlEncoded.Types (Decoded)
+import Polyform.UrlEncoded.Types (Decoded)
 
 foreign import decodeURIComponentImpl :: String -> Nullable String
 

@@ -1,4 +1,4 @@
-module Polyform.Duals.Validators.Json
+module Polyform.Json.Validators.Duals
   ( Dual
   , JsonDual
   , ObjectDual
@@ -49,13 +49,13 @@ import Polyform.Dual.Generic.Sum (class GDualSum)
 import Polyform.Dual.Generic.Sum (noArgs', unit') as Dual.Generic.Sum
 import Polyform.Dual.Record (Builder, insert) as Dual.Record
 import Polyform.Dual.Variant (on) as Dual.Variant
-import Polyform.Duals.Validator as Duals.Validator
-import Polyform.Duals.Validator.Generic (sum, variant) as Duals.Validator.Generic
+import Polyform.Validator.Dual as Validator.Dual
+import Polyform.Validator.Dual.Generic (sum, variant) as Validator.Dual.Generic
 import Polyform.Validator (Validator) as Polyform
 import Polyform.Validator (Validator, hoistFnMV, hoistFnV, runValidator, valid)
 import Polyform.Validators (Errors) as Validators
-import Polyform.Validators.Json (JsonDecodingError, JsonError, extendErr, failure)
-import Polyform.Validators.Json (arrayOf, boolean, int, json, number, object, string) as Validators.Json
+import Polyform.Json.Validators (JsonDecodingError, JsonError, extendErr, failure)
+import Polyform.Json.Validators (arrayOf, boolean, int, json, number, object, string) as Json.Validators
 import Prim.Row (class Cons, class Lacks) as Row
 import Prim.RowList (class RowToList)
 import Type.Data.Symbol (SProxy)
@@ -67,7 +67,7 @@ json :: forall e m s
   => Applicative s
   => Dual m s (JsonDecodingError e) String Json
 json = dual
-  Validators.Json.json
+  Json.Validators.json
   (Argonaut.stringify >>> pure)
 
 argonaut :: forall a e m s. Monad m => Applicative s => EncodeJson a => DecodeJson a => JsonDual m s e a
@@ -76,7 +76,7 @@ argonaut = dual prs ser
     prs = hoistFnV (\i -> either failure pure (decodeJson i))
     ser = (pure <<< encodeJson)
 
-type Dual m s e a b = Duals.Validator.Dual m s (Validators.Errors e) a b
+type Dual m s e a b = Validator.Dual.Dual m s (Validators.Errors e) a b
 type JsonDual m s e a = Dual m s (JsonError e) Argonaut.Json a
 
 -- | Because `Foreign.Object` has monoid instance
@@ -90,34 +90,34 @@ type Object a = Foreign.Object (First a)
 
 object :: forall e m s. Monad m => Applicative s => JsonDual m s e (Object Argonaut.Json)
 object = dual
-  (map First <$> Validators.Json.object)
+  (map First <$> Json.Validators.object)
   (pure <<< Argonaut.fromObject <<< map runFirst)
   where
     runFirst (First a) = a
 
 int :: forall e m s. Monad m => Applicative s => JsonDual m s e Int
 int = dual
-  Validators.Json.int
+  Json.Validators.int
   (pure <<< Argonaut.fromNumber <<< toNumber)
 
 boolean :: forall e m s. Monad m => Applicative s => JsonDual m s e Boolean
 boolean = dual
-  Validators.Json.boolean
+  Json.Validators.boolean
   (pure <<< Argonaut.fromBoolean)
 
 number :: forall e m s. Monad m => Applicative s => JsonDual m s e Number
 number = dual
-  Validators.Json.number
+  Json.Validators.number
   (pure <<< Argonaut.fromNumber)
 
 string :: forall e m s. Monad m => Applicative s => JsonDual m s e String
 string = dual
-  Validators.Json.string
+  Json.Validators.string
   (pure <<< Argonaut.fromString)
 
 arrayOf :: forall e o m s. Monad m => Applicative s => JsonDual m s e o -> JsonDual m s e (Array o)
 arrayOf (Dual.Dual (Dual.DualD prs ser)) =
-  dual (Validators.Json.arrayOf prs) (map fromArray <<< traverse ser)
+  dual (Json.Validators.arrayOf prs) (map fromArray <<< traverse ser)
 
 type ObjectDual m s e a = Dual m s (JsonError e) (Object Argonaut.Json) a
 
@@ -232,7 +232,7 @@ variant ::
   ⇒ GDualVariant (Validator m (Validators.Errors (JsonError e))) s Argonaut.Json dl d v
   ⇒ { | d }
   → JsonDual m s e (Variant v)
-variant = Duals.Validator.Generic.variant tagged
+variant = Validator.Dual.Generic.variant tagged
 
 sum :: forall a m e rep r s
   . Monad m
@@ -241,7 +241,7 @@ sum :: forall a m e rep r s
   => GDualSum (Validator m (Validators.Errors (JsonError e))) s Argonaut.Json rep r
   => { | r }
   -> JsonDual m s e a
-sum = Duals.Validator.Generic.sum tagged
+sum = Validator.Dual.Generic.sum tagged
 
 tagged :: forall a e l m s. Monad m => Monad s ⇒ IsSymbol l => SProxy l -> JsonDual m s e a -> JsonDual m s e a
 tagged label (Dual.Dual (Dual.DualD prs ser))  =
@@ -282,8 +282,8 @@ unit = Dual.Generic.Sum.unit' jsonNull
 
 decode :: forall a e. JsonDual Identity Identity e a -> Json -> Either (Validators.Errors (JsonError + e)) a
 decode dual j =
-  unwrap $ unwrap (Duals.Validator.runValidator dual j)
+  unwrap $ unwrap (Validator.Dual.runValidator dual j)
 
 encode :: forall a e. JsonDual Identity Identity e a -> a -> Json
-encode dual = un Identity <<< Duals.Validator.runSerializer dual
+encode dual = un Identity <<< Validator.Dual.runSerializer dual
 

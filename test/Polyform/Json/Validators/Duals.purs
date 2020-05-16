@@ -1,49 +1,29 @@
-module Test.Duals.Validators.Json where
+module Test.Polyform.Json.Validators.Duals where
 
 import Prelude hiding (unit)
 
-import Data.Argonaut (fromBoolean, fromNumber) as Argonaut
-import Data.Argonaut (fromBoolean, fromNumber, fromObject, fromString, jsonNull, stringify, toObject)
-import Data.Argonaut (fromString, stringify) as Argounaut
-import Data.Argonaut.Core (Json)
+import Data.Argonaut (fromNumber, fromObject, fromString, jsonNull)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Identity (Identity(..))
+import Data.Identity (Identity)
 import Data.Int (toNumber)
 import Data.List (List(..)) as List
-import Data.Map as Map
-import Data.Maybe (Maybe(..))
-import Data.Newtype (unwrap)
-import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
-import Data.Validation.Semigroup (invalid, unV)
-import Data.Variant (Variant, inj, match, onMatch)
-import Effect (Effect)
+import Data.Validation.Semigroup (unV)
+import Data.Variant (Variant, inj)
 import Effect.Aff (Aff)
-import Effect.Class.Console (log)
-import Foreign.Object (Object, fromFoldable) as Object
-import Global.Unsafe (unsafeStringify)
-import Polyform.Dual (DualD(..), dual, parser, serializer, (~))
+import Foreign.Object (fromFoldable) as Object
+import Polyform.Dual (parser)
 import Polyform.Dual.Record (build) as Dual.Record
-import Polyform.Dual.Validators.UrlEncoded as Dual.Validators.UrlEncoded
 import Polyform.Dual.Variant (case_)
-import Polyform.Duals.Validator (runSerializer, runSerializerM)
-import Polyform.Duals.Validators.Json (Dual, JsonDual, arrayOf, boolean, field, int, json, noArgs, number, object, on, string, sum, unit, (:=))
-import Polyform.Validator (hoistFn, hoistFnMV, hoistFnV, runValidator, valid)
-import Polyform.Validators.Json (JsonError, Validator)
-import Polyform.Validators.Json (Validator, JsonDecodingError, failure, jsType) as Json
-import Polyform.Validators.UrlEncoded as UrlEncoded
+import Polyform.Json.Validators.Duals (JsonDual, arrayOf, boolean, int, noArgs, number, object, on, string, sum, unit, (:=))
+import Polyform.Json.Validators.Duals (JsonDual) as Json.Validators.Dual
+import Polyform.Validator (runValidator)
 import Prelude (unit) as Prelude
-import Record.Extra (sequenceRecord)
-import Test.Unit (failure, test)
+import Test.Unit (TestSuite, failure, test)
 import Test.Unit (suite) as Test.Unit
-import Test.Unit (suite) as Test.Unit
-import Test.Unit.Assert (assert, equal)
-import Test.Unit.Main (runTest)
-import Type.Prelude (SProxy(..), reflectSymbol)
-import Type.Row (type (+))
-import Unsafe.Coerce (unsafeCoerce)
-
+import Test.Unit.Assert (equal)
+import Type.Prelude (SProxy(..))
 
 data Sum = S String | I Int | B Boolean | N Number | U Unit | E
 derive instance genericSum ∷ Generic Sum _
@@ -54,6 +34,7 @@ instance showSum ∷ Show Sum where
 data Single = Single String
 derive instance genericSingle ∷ Generic Single _
 
+variant ∷ forall e m s. Monad s ⇒ Monad m ⇒ Json.Validators.Dual.JsonDual m s e (Variant (i ∷ Int, s ∷ String, u ∷ Unit))
 variant = case_
   # on (SProxy ∷ SProxy "s") string
   # on (SProxy ∷ SProxy "u") unit
@@ -82,9 +63,9 @@ variant = case_
 --     valueDual = dual { parser, serializer }
 
 
+suite :: TestSuite
 suite =
-  Test.Unit.suite "Test.Duals.Validators.Json" $ do
-    -- Test.Unit.suite "variant handling" $ do
+  Test.Unit.suite "Test.Json.Validators.Duals" $ do
 
     Test.Unit.suite "record handling" $ do
       let
@@ -115,9 +96,7 @@ suite =
     Test.Unit.suite "sum handling" $ do
       test "through generic helper" $ do
         let
-          sumD ∷
-            ∀ e m s.
-            JsonDual Aff Identity () Sum
+          sumD ∷ JsonDual Aff Identity () Sum
           sumD = sum
             { "S": identity string
             , "I": identity int

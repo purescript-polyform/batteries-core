@@ -1,4 +1,4 @@
-module Polyform.Validators.UrlEncoded
+module Polyform.UrlEncoded.Validators
   ( module Parser
   , module Types
   , FieldValueValidator
@@ -27,9 +27,9 @@ import Data.Variant (inj)
 import Polyform.Validator (hoistFn, hoistFnEither, hoistFnMV, hoistFnV, runValidator)
 import Polyform.Validator as Polyform.Validator
 import Polyform.Validators (Errors)
-import Polyform.Validators.UrlEncoded.Parser (Options) as Parser
-import Polyform.Validators.UrlEncoded.Parser (parse)
-import Polyform.Validators.UrlEncoded.Types (Decoded, Error, _urlDecoding, _urlValueParsing, Value, Validator) as Types
+import Polyform.UrlEncoded.Parser (Options) as Parser
+import Polyform.UrlEncoded.Parser (parse)
+import Polyform.UrlEncoded.Types (Decoded, Error, _urlDecoding, _urlValueParsing, Value, Validator) as Types
 
 -- | This module provides validators for urlencoded values.
 -- | In general it follows "browsers standard" for encoding
