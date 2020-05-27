@@ -1,7 +1,15 @@
 module Polyform.Json.Validators
-  ( JNull
+  ( ArrayExpected
+  , BooleanExpected
   , Errors
+  , FieldMissing
+  , IntExpected
+  , JNull
+  , NullExpected
+  , NumberExpected
+  , ObjectExpected
   , Segment(..)
+  , StringExpected
   , Validator
   , _arrayExpected
   , _booleanExpected
@@ -14,6 +22,7 @@ module Polyform.Json.Validators
   , arrayOf
   , boolean
   , consErrorsPath
+  , error
   , liftValidator
   , liftErrors
   , index
@@ -57,6 +66,7 @@ import Polyform.Validator (liftFnMV, liftFnMaybe, lmapValidator, runValidator)
 import Polyform.Validators (Errors, Validator) as Validators
 import Prim.Row (class Cons) as Row
 import Type.Prelude (class IsSymbol)
+import Type.Row (type (+))
 import Unsafe.Coerce (unsafeCoerce)
 
 -- | This error representation is for sure "object field / array element" biased.
@@ -107,7 +117,9 @@ consErrorsPath segment = map step
 
 _objectExpected = SProxy ∷ SProxy "objectExpected"
 
-object ∷ ∀ e m. Monad m ⇒ Validator m (objectExpected ∷ Json | e) Json (Object Json)
+type ObjectExpected e = (objectExpected ∷ Json | e)
+
+object ∷ ∀ e m. Monad m ⇒ Validator m (ObjectExpected + e) Json (Object Json)
 object = Validator.liftFnMaybe (error _objectExpected) Argonaut.toObject
 
 field_
@@ -119,6 +131,8 @@ field_
 field_ name fv = Validator.liftFn (Object.lookup name) >>> lmapValidator (consErrorsPath (Key name)) fv
 
 _fieldMissing = SProxy ∷ SProxy "fieldMissing"
+
+type FieldMissing e = (fieldMissing ∷ Unit | e)
 
 -- | These two validators starts from `Object Json` and not just `Json` so
 -- | you should compose them with `object` validator like:
@@ -136,8 +150,8 @@ field
   ∷ ∀ a errs m
   . Monad m
   ⇒ String
-  → Validator m (fieldMissing ∷ Unit | errs) Json a
-  → Validator m (fieldMissing ∷ Unit | errs) (Object Json) a
+  → Validator m (FieldMissing + errs) Json a
+  → Validator m (FieldMissing + errs) (Object Json) a
 field name fv = field_ name (liftFnMaybe (const $ error _fieldMissing unit) identity >>> fv)
 
 optionalField
@@ -152,62 +166,81 @@ optionalField name fv = field_ name v
 
 _arrayExpected = SProxy ∷ SProxy "arrayExpected"
 
-array ∷ ∀ e m. Monad m ⇒ Validator m (arrayExpected ∷ Json | e) Json (Array Json)
-array = Validator.liftFnMaybe (error _arrayExpected) Argonaut.toArray
+type ArrayExpected e = (arrayExpected ∷ Json | e)
 
-_indexMissing = SProxy ∷ SProxy "indexMissing"
+array ∷ ∀ e m. Monad m ⇒ Validator m (ArrayExpected + e) Json (Array Json)
+array = Validator.liftFnMaybe (error _arrayExpected) Argonaut.toArray
 
 arrayOf
   ∷ ∀ m e a
   . Monad m
-  ⇒ Validator m (arrayExpected ∷ Json | e) Json a
-  → Validator m (arrayExpected ∷ Json | e) Json (Array a)
+  ⇒ Validator m (ArrayExpected + e) Json a
+  → Validator m (ArrayExpected + e) Json (Array a)
 arrayOf v = array >>> liftFnMV av
   where
     ep idx = consErrorsPath (Index idx)
 
     -- | Run every validator by prefixing its error path with index.
     -- | Validator results in `m (V e a)` so we need traverse here.
-    f ∷ Array Json → m (Array (V (Errors (arrayExpected ∷ Json | e )) a ))
+    f ∷ Array Json → m (Array (V (Errors (ArrayExpected + e )) a ))
     f = traverseWithIndex \idx → runValidator (lmapValidator (ep idx) v)
 
-    av ∷ Array Json → m (V (Errors (arrayExpected ∷ Json | e )) (Array a))
+    av ∷ Array Json → m (V (Errors (ArrayExpected + e)) (Array a))
     av = f >>> map sequence
+
+_indexMissing = SProxy ∷ SProxy "indexMissing"
+
+type IndexMissing e = (indexMissing ∷ Unit | e)
 
 index
   ∷ ∀ errs m
   . Monad m
   ⇒ Int
-  → Validator.Validator m (Errors (indexMissing ∷ Unit | errs)) (Array Json) Json
+  → Validator.Validator m (Errors (IndexMissing + errs)) (Array Json) Json
 index idx = liftFnMaybe err (flip Array.index idx)
   where
     err _ = consErrorsPath (Index idx) (error _indexMissing unit)
 
+_nullExpected = SProxy ∷ SProxy "nullExpected"
+
+type NullExpected e = (nullExpected ∷ Json | e)
+
+null ∷ ∀ e m. Monad m ⇒ Validator m (NullExpected + e) Json JNull
+null = Validator.liftFnMaybe (error _nullExpected) toNull
+
 nullable
   ∷ ∀ a errs m
   . Monad m
-  ⇒ Validator m (nullExpected ∷ Json | errs) Json a
-  → Validator m (nullExpected ∷ Json | errs) Json (Maybe a)
+  ⇒ Validator m (NullExpected + errs) Json a
+  → Validator m (NullExpected + errs) Json (Maybe a)
 nullable fv = (null *> pure Nothing) <|> (Just <$> fv)
 
 _intExpected = SProxy ∷ SProxy "intExpected"
 
-int ∷ ∀ e m. Monad m ⇒ Validator m (intExpected ∷ Json | e) Json Int
+type IntExpected e = (intExpected ∷ Json | e)
+
+int ∷ ∀ e m. Monad m ⇒ Validator m (IntExpected + e) Json Int
 int = Validator.liftFnMaybe (error _intExpected) (Argonaut.toNumber >=> Int.fromNumber)
 
 _booleanExpected = SProxy ∷ SProxy "booleanExpected"
 
-boolean ∷ ∀ e m. Monad m ⇒ Validator m (booleanExpected ∷ Json | e) Json Boolean
+type BooleanExpected e = (booleanExpected ∷ Json | e)
+
+boolean ∷ ∀ e m. Monad m ⇒ Validator m (BooleanExpected + e) Json Boolean
 boolean = Validator.liftFnMaybe (error _booleanExpected) Argonaut.toBoolean
 
 _stringExpected = SProxy ∷ SProxy "stringExpected"
 
-string ∷ ∀ e m. Monad m ⇒ Validator m (stringExpected ∷ Json | e) Json String
+type StringExpected e = (stringExpected ∷ Json | e)
+
+string ∷ ∀ e m. Monad m ⇒ Validator m (StringExpected + e) Json String
 string = Validator.liftFnMaybe (error _stringExpected) Argonaut.toString
 
 _numberExpected = SProxy ∷ SProxy "numberExpected"
 
-number ∷ ∀ e m. Monad m ⇒ Validator m (numberExpected ∷ Json | e) Json Number
+type NumberExpected e = (numberExpected ∷ Json | e)
+
+number ∷ ∀ e m. Monad m ⇒ Validator m (NumberExpected + e) Json Number
 number = Validator.liftFnMaybe (error _numberExpected) Argonaut.toNumber
 
 -- | Because argonaut is not providing this type for us any more we define
@@ -223,11 +256,6 @@ instance ordJNull ∷ Ord JNull where
 
 jnull ∷ JNull
 jnull = unsafeCoerce Argonaut.jsonNull
-
-_nullExpected = SProxy ∷ SProxy "nullExpected"
-
-null ∷ ∀ e m. Monad m ⇒ Validator m (nullExpected ∷ Json | e) Json JNull
-null = Validator.liftFnMaybe (error _nullExpected) toNull
 
 toNull ∷ Json → Maybe JNull
 toNull = Argonaut.isNull >>> if _ then Just jnull else Nothing
