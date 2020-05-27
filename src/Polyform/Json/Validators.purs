@@ -1,5 +1,6 @@
 module Polyform.Json.Validators
-  ( ArrayExpected
+  ( ArgonautError
+  , ArrayExpected
   , BooleanExpected
   , Errors
   , FieldMissing
@@ -18,6 +19,8 @@ module Polyform.Json.Validators
   , _nullExpected
   , _numberExpected
   , _objectExpected
+  , _stringExpected
+  , argonaut
   , array
   , arrayOf
   , boolean
@@ -44,7 +47,9 @@ import Prelude
 import Control.Alt ((<|>))
 import Data.Argonaut (Json)
 import Data.Argonaut (isNull, jsonNull, toArray, toBoolean, toNumber, toObject, toString) as Argonaut
+import Data.Argonaut.Decode.Class (class DecodeJson, decodeJson)
 import Data.Array (index, singleton) as Array
+import Data.Bifunctor (lmap)
 import Data.Either (note)
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
@@ -61,7 +66,7 @@ import Data.Variant (Variant)
 import Data.Variant (inj) as Variant
 import Foreign.Object (Object)
 import Foreign.Object (lookup) as Object
-import Polyform.Validator (Validator, liftFn, liftFnMaybe) as Validator
+import Polyform.Validator (Validator, liftFn, liftFnEither, liftFnMaybe) as Validator
 import Polyform.Validator (liftFnMV, liftFnMaybe, lmapValidator, runValidator)
 import Polyform.Validators (Errors, Validator) as Validators
 import Prim.Row (class Cons) as Row
@@ -263,3 +268,9 @@ toNull = Argonaut.isNull >>> if _ then Just jnull else Nothing
 fromNull ∷ JNull → Json
 fromNull = unsafeCoerce
 
+_argonautError = SProxy ∷ SProxy "argonautError"
+
+type ArgonautError e = (argonautError ∷ String | e)
+
+argonaut ∷ ∀ a e m. Monad m ⇒ DecodeJson a ⇒ Validator m (ArgonautError + e) Json a
+argonaut = Validator.liftFnEither (lmap (error _argonautError) <<< decodeJson)

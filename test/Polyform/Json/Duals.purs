@@ -9,21 +9,20 @@ import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
 import Data.Identity (Identity)
 import Data.Int (toNumber)
-import Data.List (List(..)) as List
 import Data.Tuple.Nested ((/\))
 import Data.Validation.Semigroup (invalid, unV)
 import Data.Variant (Variant, inj, match)
 import Effect.Aff (Aff)
 import Foreign.Object (fromFoldable) as Object
+import Global.Unsafe (unsafeStringify)
 import Polyform.Dual (Dual(..)) as Dual
 import Polyform.Dual (dual, parser, (~))
 import Polyform.Dual.Record (build) as Dual.Record
 import Polyform.Dual.Variant (case_)
 import Polyform.Json.Duals (CoproductErrors, IncorrectVariantTag, _incorrectVariantTag, arrayOf, boolean, int, noArgs, number, object, on, string, sum, unit, (:=))
-import Polyform.Json.Duals (Dual) as Json.Validators.Dual
-import Polyform.Json.Duals (Dual, boolean, field, int, string) as Json.Duals
+import Polyform.Json.Duals (Dual, field, string) as Json.Duals
 import Polyform.Json.Duals (object) as Json.Dual
-import Polyform.Json.Validators (BooleanExpected, FieldMissing, IntExpected, NumberExpected, StringExpected, ObjectExpected)
+import Polyform.Json.Validators (BooleanExpected, FieldMissing, IntExpected, NumberExpected, ObjectExpected, StringExpected, _stringExpected)
 import Polyform.Json.Validators (boolean, error, int, string) as Json.Validators
 import Polyform.Validator (liftFn) as Validator
 import Polyform.Validator (liftFnMV) as Validtor
@@ -132,68 +131,89 @@ suite =
           (_ `equal` expected)
           parsed
 
---     Test.Unit.suite "sum handling" $ do
---       test "through generic helper" $ do
---         let
---           sumD ∷ JsonDual Aff Identity () Sum
---           sumD = sum
---             { "S": identity string
---             , "I": identity int
---             , "B": identity boolean
---             , "N": identity number
---             , "E": identity noArgs
---             , "U": identity unit
---             }
--- 
---           s = fromObject $ Object.fromFoldable
---             [ "tag" /\ fromString "S", "value" /\ fromString "test" ]
---           e = fromObject $ Object.fromFoldable
---             [ "tag" /\ fromString "E", "value" /\ jsonNull ]
---           n = fromObject $ Object.fromFoldable
---             [ "tag" /\ fromString "N", "value" /\ fromNumber 8.0 ]
---           u = fromObject $ Object.fromFoldable
---             [ "tag" /\ fromString "U", "value" /\ jsonNull ]
--- 
---         parsedS ← runValidator (parser sumD) s
---         unV
---           (const $ failure "Validation failed")
---           (_ `equal` (S "test"))
---           parsedS
--- 
---         parsedE ← runValidator (parser sumD) e
---         unV
---           (const $ failure "Validation failed")
---           (_ `equal` E)
---           parsedE
--- 
--- 
---         parsedN ← runValidator (parser sumD) n
---         unV
---           (const $ failure "Validation failed")
---           (_ `equal` (N 8.0))
---           parsedN
--- 
---         parsedU ← runValidator (parser sumD) u
---         unV
---           (const $ failure "Validation failed")
---           (_ `equal` (U Prelude.unit))
---           parsedU
--- 
---         let
---           s' = fromObject $ Object.fromFoldable
---             [ "tag" /\ fromString "S", "value" /\ fromNumber 8.0 ]
---           _json = SProxy ∷ SProxy "json"
---           errs =
---             [ inj _json { msg: "number is not a string", path: List.Nil }
---             , inj _json { msg: "Incorrect tag: S", path: List.Nil }
---             , inj _json { msg: "Incorrect tag: S", path: List.Nil }
---             , inj _json { msg: "Incorrect tag: S", path: List.Nil }
---             , inj _json { msg: "Incorrect tag: S", path: List.Nil }
---             , inj _json { msg: "Incorrect tag: S", path: List.Nil }
---             ]
---         parsedS' ← runValidator (parser sumD) s'
--- 
---         unV
---           (_ `equal` errs)
---           (const $ failure "Expecting validation failure")
---           parsedS'
+    Test.Unit.suite "sum handling" $ do
+      test "through generic helper" $ do
+        let
+          sumD
+            ∷ Json.Duals.Dual
+              Aff
+              Identity
+              ( BooleanExpected
+              + FieldMissing
+              + IntExpected
+              + IncorrectVariantTag
+              + NumberExpected
+              + ObjectExpected
+              + StringExpected
+              + ()
+              )
+              Json
+              Sum
+          sumD = sum
+            { "S": identity string
+            , "I": identity int
+            , "B": identity boolean
+            , "N": identity number
+            , "E": identity noArgs
+            , "U": identity unit
+            }
+
+          s = fromObject $ Object.fromFoldable
+            [ "tag" /\ fromString "S", "value" /\ fromString "test" ]
+          e = fromObject $ Object.fromFoldable
+            [ "tag" /\ fromString "E", "value" /\ jsonNull ]
+          n = fromObject $ Object.fromFoldable
+            [ "tag" /\ fromString "N", "value" /\ fromNumber 8.0 ]
+          u = fromObject $ Object.fromFoldable
+            [ "tag" /\ fromString "U", "value" /\ jsonNull ]
+
+        parsedS ← runValidator (parser sumD) s
+        unV
+          (const $ failure "Validation failed")
+          (_ `equal` (S "test"))
+          parsedS
+
+        parsedE ← runValidator (parser sumD) e
+        unV
+          (const $ failure "Validation failed")
+          (_ `equal` E)
+          parsedE
+
+
+        parsedN ← runValidator (parser sumD) n
+        unV
+          (const $ failure "Validation failed")
+          (_ `equal` (N 8.0))
+          parsedN
+
+        parsedU ← runValidator (parser sumD) u
+        unV
+          (const $ failure "Validation failed")
+          (_ `equal` (U Prelude.unit))
+          parsedU
+
+        let
+          s' = fromObject $ Object.fromFoldable
+            [ "tag" /\ fromString "S", "value" /\ fromNumber 8.0 ]
+          _json = SProxy ∷ SProxy "json"
+          expectedError
+            = Json.Validators.error _stringExpected (Argonaut.fromNumber 8.0)
+            <> Json.Validators.error _incorrectVariantTag "S"
+            <> Json.Validators.error _incorrectVariantTag "S"
+            <> Json.Validators.error _incorrectVariantTag "S"
+            <> Json.Validators.error _incorrectVariantTag "S"
+            <> Json.Validators.error _incorrectVariantTag "S"
+        parsedS' ← runValidator (parser sumD) s'
+
+        unV
+          ( \err → when (err /= expectedError) $
+              failure
+                ( "Expecting \""
+                <> unsafeStringify expectedError
+                <> "\" but got: \""
+                <> unsafeStringify err
+                <> "\""
+                )
+          )
+          (const $ failure "Expecting validation failure")
+          parsedS'

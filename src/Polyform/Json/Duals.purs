@@ -4,6 +4,8 @@ import Prelude
 
 import Data.Argonaut (Json, jsonNull)
 import Data.Argonaut (fromArray, fromBoolean, fromNumber, fromObject, fromString) as Argonaut
+import Data.Argonaut.Decode.Class (class DecodeJson)
+import Data.Argonaut.Encode.Class (class EncodeJson, encodeJson)
 import Data.Either (note)
 import Data.Generic.Rep (class Generic, NoArguments)
 import Data.Int (toNumber) as Int
@@ -25,8 +27,8 @@ import Polyform.Dual.Generic.Sum (noArgs', unit') as Dual.Generic.Sum
 import Polyform.Dual.Generic.Variant (class GDualVariant)
 import Polyform.Dual.Record (Builder, insert) as Dual.Record
 import Polyform.Dual.Variant (on) as Dual.Variant
-import Polyform.Json.Validators (ArrayExpected, BooleanExpected, Errors, FieldMissing, JNull, NullExpected, NumberExpected, ObjectExpected, StringExpected)
-import Polyform.Json.Validators (Errors, array, arrayOf, boolean, error, field, fromNull, int, liftValidator, null, number, object, optionalField, string) as Json.Validators
+import Polyform.Json.Validators (ArrayExpected, BooleanExpected, Errors, FieldMissing, JNull, NullExpected, NumberExpected, ObjectExpected, StringExpected, ArgonautError)
+import Polyform.Json.Validators (Errors, argonaut, array, arrayOf, boolean, error, field, fromNull, int, liftValidator, null, number, object, optionalField, string) as Json.Validators
 import Polyform.Validator (Validator, liftFnV) as Validator
 import Polyform.Validator (valid)
 import Polyform.Validator.Dual as Validator.Dual
@@ -36,31 +38,6 @@ import Prim.Row (class Cons, class Lacks) as Row
 import Prim.RowList (class RowToList)
 import Type.Prelude (class IsSymbol, SProxy(..), reflectSymbol)
 import Type.Row (type (+))
--- import Polyform.Validator.Dual.Generic (sum, variant) as Validator.Dual.Generic
--- import Polyform.Validator (Validator) as Polyform
--- import Polyform.Validator (Validator, liftFnMV, liftFnV, runValidator, valid)
--- import Polyform.Validators (Errors) as Validators
--- import Polyform.Json.Validators (JsonDecodingError, JsonError, extendErr, failure)
--- import Polyform.Json.Validators (arrayOf, boolean, int, json, number, object, string) as Json.Validators
--- import Prim.Row (class Cons, class Lacks) as Row
--- import Prim.RowList (class RowToList)
--- import Type.Data.Symbol (SProxy)
--- import Type.Prelude (class IsSymbol, reflectSymbol)
--- import Type.Row (type (+))
--- 
--- json ∷ ∀ e m s
---    . Monad m
---   ⇒ Applicative s
---   ⇒ Dual m s (JsonDecodingError e) String Json
--- json = dual
---   Json.Validators.json
---   (Argonaut.stringify >>> pure)
--- 
--- argonaut ∷ ∀ a e m s. Monad m ⇒ Applicative s ⇒ EncodeJson a ⇒ DecodeJson a ⇒ JsonDual m s e a
--- argonaut = dual prs ser
---   where
---     prs = liftFnV (\i → either failure pure (decodeJson i))
---     ser = (pure <<< encodeJson)
 
 type Dual m s errs a b = Validator.Dual.Dual m s (Errors errs) a b
 
@@ -305,6 +282,12 @@ noArgs = Dual.Generic.Sum.noArgs' jsonNull
 
 unit ∷ ∀ e m s. Monad m ⇒ Applicative s ⇒ Dual m s e Json Unit
 unit = Dual.Generic.Sum.unit' jsonNull
+
+argonaut ∷ ∀ a e m s. Monad m ⇒ Applicative s ⇒ EncodeJson a ⇒ DecodeJson a ⇒ Dual m s (ArgonautError + e) Json a
+argonaut = dual Json.Validators.argonaut ser
+  where
+    ser = (pure <<< encodeJson)
+
 
 -- -- | TODO:
 -- -- | * alias signature types
