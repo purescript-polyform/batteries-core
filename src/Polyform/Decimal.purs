@@ -14,7 +14,7 @@ import Data.String.Regex.Unsafe (unsafeRegex)
 import Polyform.Data.String (reverseCodeUnits) as String
 import Polyform.Data.String.Regex (escape) as Regex
 import Polyform.Dual (dual) as Dual
-import Polyform.Validator (hoistFnMaybe) as Validator
+import Polyform.Validator (liftFnMaybe) as Validator
 import Polyform.Validators (Validator, Dual) as Validators
 import Polyform.Validators (error) as Polyform.Validtors
 import Type.Prelude (SProxy(..))
@@ -89,7 +89,7 @@ validator
   ⇒ Formatting
   → Validators.Validator m (decimal ∷ String | e) String Decimal
 validator (Formatting { parse: p }) =
-  Validator.hoistFnMaybe (Polyform.Validtors.error _decimal) p
+  Validator.liftFnMaybe (Polyform.Validtors.error _decimal) p
 
 dual
   ∷ ∀ e m s

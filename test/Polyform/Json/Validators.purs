@@ -11,7 +11,7 @@ import Data.Variant (inj)
 import Effect.Aff (Aff)
 import Foreign.Object (fromFoldable) as Object
 import Global.Unsafe (unsafeStringify)
-import Polyform.Json.Validators (Segment(..), _fieldMissing, _intExpected, consErrorsPath, field, hoistErrors, int, number, object, string)
+import Polyform.Json.Validators (Segment(..), _fieldMissing, _intExpected, consErrorsPath, field, liftErrors, int, number, object, string)
 import Polyform.Json.Validators (Validator) as Json
 import Polyform.Validator (runValidator)
 import Record.Extra (sequenceRecord)
@@ -75,8 +75,8 @@ suite =
           , "baz" /\ fromNumber 8.0
           ]
         expectedError = consErrorsPath (Key "foo") $
-          consErrorsPath (Key "x") (hoistErrors [ inj _intExpected (fromString "incorrect int") ])
-          <> consErrorsPath (Key "y") (hoistErrors [ inj _fieldMissing unit ])
+          consErrorsPath (Key "x") (liftErrors [ inj _intExpected (fromString "incorrect int") ])
+          <> consErrorsPath (Key "y") (liftErrors [ inj _fieldMissing unit ])
 
       parsed ← runValidator obj input
       unV

@@ -34,8 +34,8 @@ import Data.Maybe (Maybe(..))
 import Data.Number as Number
 import Data.Variant (Variant, inj)
 import Polyform.UrlEncoded.Query (Decoded(..), Key, Options, Value, parse) as Query
-import Polyform.Validator (check, hoistFnMaybe) as Validator
-import Polyform.Validator (hoistFn, hoistFnMV, hoistFnV, runValidator)
+import Polyform.Validator (check, liftFnMaybe) as Validator
+import Polyform.Validator (liftFn, liftFnMV, liftFnV, runValidator)
 import Polyform.Validators (Validator, error, invalid) as Validators
 import Type.Prelude (SProxy(..))
 
@@ -52,13 +52,13 @@ type Error fieldErrs errs =
 _queryParseError = SProxy ∷ SProxy "urlEncodedQueryParseError"
 
 query ∷ ∀ m e errs. Monad m ⇒ Query.Options → Validators.Validator m (Error e errs) String Query.Decoded
-query opts = Validator.hoistFnMaybe (Validators.error _queryParseError) (Query.parse opts)
+query opts = Validator.liftFnMaybe (Validators.error _queryParseError) (Query.parse opts)
 
 _fieldError = SProxy ∷ SProxy "urlEncodedFieldError"
 
 field ∷ ∀ a e m errs. Monad m ⇒ Query.Key → Field m e a → Validators.Validator m (Error e errs) Query.Decoded a
 field name validator =
-  hoistFnMV $ \(Query.Decoded q) → do
+  liftFnMV $ \(Query.Decoded q) → do
     let input = Map.lookup name q
     result ← runValidator validator input
     pure $ lmap failure result
@@ -66,7 +66,7 @@ field name validator =
     failure errors = [ inj _fieldError { errors, name } ]
 
 optional ∷ ∀ a e m. Monad m ⇒ Field m e a → Field m e (Maybe a)
-optional fv = hoistFnMV $ case _ of
+optional fv = liftFnMV $ case _ of
   Just [] → pure (pure Nothing)
   Nothing → pure (pure Nothing)
   value → map Just <$> runValidator fv value
@@ -80,7 +80,7 @@ optional fv = hoistFnMV $ case _ of
 _booleanExpected = SProxy ∷ SProxy "urlEncodedBooleanExpected"
 
 boolean ∷ ∀ e m. Applicative m ⇒ Field m (urlEncodedBooleanExpected ∷ Query.Value | e) Boolean
-boolean = hoistFnV case _ of
+boolean = liftFnV case _ of
   Just ["on"] → pure true
   Just ["off"] → pure false
   Nothing → pure false
@@ -89,7 +89,7 @@ boolean = hoistFnV case _ of
 _singleStringExpected = SProxy ∷ SProxy "urlEncodedSingleStringExpected"
 
 singleString ∷ ∀ e m. Applicative m ⇒ Field m (urlEncodedSingleStringExpected ∷ Maybe Query.Value | e) String
-singleString = hoistFnV $ case _ of
+singleString = liftFnV $ case _ of
   Just [v] → pure v
   v → Validators.invalid _singleStringExpected v
 
@@ -101,15 +101,15 @@ nonBlank = singleString >>> Validator.check (const $ Validators.error _nonBlankE
 _numberExpected = SProxy ∷ SProxy "urlEncodedNumberExpected"
 
 number ∷ ∀ e m. Monad m ⇒ Field m (urlEncodedSingleStringExpected ∷ Maybe Query.Value, urlEncodedNumberExpected ∷ String | e) Number
-number = singleString >>> Validator.hoistFnMaybe (Validators.error _numberExpected) Number.fromString
+number = singleString >>> Validator.liftFnMaybe (Validators.error _numberExpected) Number.fromString
 
 _intExpected = SProxy ∷ SProxy "urlEncodedIntExpected"
 
 int ∷ ∀ e m. Monad m ⇒ Field m (urlEncodedSingleStringExpected ∷ Maybe Query.Value, urlEncodedIntExpected ∷ String | e) Int
-int = singleString >>> Validator.hoistFnMaybe (Validators.error _intExpected) Int.fromString
+int = singleString >>> Validator.liftFnMaybe (Validators.error _intExpected) Int.fromString
 
 array ∷ ∀ e m. Monad m ⇒ Field m e (Array String)
-array = hoistFn $ case _ of
+array = liftFn $ case _ of
   Just s → s
   Nothing → []
 

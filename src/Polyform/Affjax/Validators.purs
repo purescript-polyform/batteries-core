@@ -13,7 +13,7 @@ import Data.Variant (Variant, inj)
 import Effect.Aff (Aff)
 import Global.Unsafe (unsafeStringify)
 import Polyform.Validator (Validator) as Polyform
-import Polyform.Validator (hoistFn, hoistFnMV, hoistFnV)
+import Polyform.Validator (liftFn, liftFnMV, liftFnV)
 import Type.Row (type (+))
 
 type HttpError (err :: # Type) = (wrongHttpStatus :: StatusCode | err)
@@ -32,7 +32,7 @@ affjax
       (Error err)
       (Affjax.Request a)
       (Affjax.Response a)
-affjax = hoistFnMV $ \req -> do
+affjax = liftFnMV $ \req -> do
   (handleResponse <$> Affjax.request req)
   where
     handleResponse = case _ of
@@ -53,7 +53,7 @@ status
       (Error (HttpError + err))
       (Affjax.Response res)
       (Affjax.Response res)
-status isCorrect = hoistFnV checkStatus
+status isCorrect = liftFnV checkStatus
   where
     checkStatus response =
       if isCorrect response.status then
@@ -68,7 +68,7 @@ body
       (Error (HttpError + err))
       (Affjax.Response res)
       res
-body = hoistFn _.body
+body = liftFn _.body
 
 isStatusOK :: StatusCode -> Boolean
 isStatusOK (StatusCode n) = (n == 200)
