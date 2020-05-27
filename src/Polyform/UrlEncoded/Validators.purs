@@ -1,97 +1,115 @@
+-- | This module provides validators for urlencoded values.
+-- | In general it follows "browsers standard" for encoding
+-- | so it should be useful in the context of HTML form validation.
+-- |
 module Polyform.UrlEncoded.Validators
-  ( module Parser
-  , module Types
-  , FieldValueValidator
+  ( Error
+  , FieldError
+  , _booleanExpected
+  , _fieldError
+  , _intExpected
+  , _nonBlankExpected
+  , _numberExpected
+  , _queryParseError
+  , _singleStringExpected
   , array
   , boolean
   , field
   , int
+  , module Query
+  , nonBlank
   , number
   , optional
   , query
-  , string
+  , singleString
   )
   where
 
 import Prelude
 
-import Data.Array (singleton) as Array
 import Data.Bifunctor (lmap)
 import Data.Int as Int
 import Data.Map (lookup) as Map
 import Data.Maybe (Maybe(..))
 import Data.Number as Number
-import Data.Validation.Semigroup (V)
-import Data.Validation.Semigroup (invalid) as Validation.Semigroup
-import Data.Variant (inj)
-import Polyform.Validator (hoistFn, hoistFnEither, hoistFnMV, hoistFnV, runValidator)
-import Polyform.Validator as Polyform.Validator
-import Polyform.Validators (Errors)
-import Polyform.UrlEncoded.Parser (Options) as Parser
-import Polyform.UrlEncoded.Parser (parse)
-import Polyform.UrlEncoded.Types (Decoded, Error, _urlDecoding, _urlValueParsing, Value, Validator) as Types
+import Data.Variant (Variant, inj)
+import Polyform.UrlEncoded.Query (Decoded(..), Key, Options, Value, parse) as Query
+import Polyform.Validator (check, hoistFnMaybe) as Validator
+import Polyform.Validator (hoistFn, hoistFnMV, hoistFnV, runValidator)
+import Polyform.Validators (Validator, error, invalid) as Validators
+import Type.Prelude (SProxy(..))
 
--- | This module provides validators for urlencoded values.
--- | In general it follows "browsers standard" for encoding
--- | so it should be useful in the context of request validation.
--- | On the other hand if you want to build backend form
--- | validation solution on top of this it is probably
--- | better to take a look at `Polyform.Validator.Reporter`.
-query :: forall m e. Monad m => Parser.Options -> Types.Validator m e String Types.Decoded
-query opts = hoistFnEither (lmap (Array.singleton <<< inj Types._urlDecoding) <<< parse opts)
+type Field m e b = Validators.Validator m e (Maybe Query.Value) b
 
--- | `String` error is transformed into `Types.Error` in "form" level validators
-type FieldValueValidator m a = Polyform.Validator.Validator m (Array String) (Maybe (Array String)) a
+type FieldError fieldErrs = { name ∷ String, errors ∷ Array (Variant fieldErrs) }
 
-invalid :: forall a. String -> V (Array String) a
-invalid = Validation.Semigroup.invalid <<< Array.singleton
+type Error fieldErrs errs =
+  ( urlEncodedQueryParseError ∷ String
+  , urlEncodedFieldError ∷ FieldError fieldErrs
+  | errs
+  )
+
+_queryParseError = SProxy ∷ SProxy "urlEncodedQueryParseError"
+
+query ∷ ∀ m e errs. Monad m ⇒ Query.Options → Validators.Validator m (Error e errs) String Query.Decoded
+query opts = Validator.hoistFnMaybe (Validators.error _queryParseError) (Query.parse opts)
+
+_fieldError = SProxy ∷ SProxy "urlEncodedFieldError"
+
+field ∷ ∀ a e m errs. Monad m ⇒ Query.Key → Field m e a → Validators.Validator m (Error e errs) Query.Decoded a
+field name validator =
+  hoistFnMV $ \(Query.Decoded q) → do
+    let input = Map.lookup name q
+    result ← runValidator validator input
+    pure $ lmap failure result
+  where
+    failure errors = [ inj _fieldError { errors, name } ]
+
+optional ∷ ∀ a e m. Monad m ⇒ Field m e a → Field m e (Maybe a)
+optional fv = hoistFnMV $ case _ of
+  Just [] → pure (pure Nothing)
+  Nothing → pure (pure Nothing)
+  value → map Just <$> runValidator fv value
 
 -- | Encodes default browser behavior which sets `checkbox` value to "on"
 -- | when checked and skips it completely when it is not.
 -- | We consider also "off" value because we want to be more consistent when
 -- | building API comunication layer - if you have any objections please fill
 -- | an issue with description.
-boolean :: forall m. Monad m => FieldValueValidator m Boolean
-boolean = hoistFnV $ case _ of
-  Just ["on"] -> pure true
-  Just ["off"] -> pure false
-  Nothing -> pure false
-  Just v -> invalid $ "Could not parse \"" <> show v <> "\" value as boolean."
 
-string :: forall m. Monad m => FieldValueValidator m String
-string = hoistFnV $ case _ of
-  Just [v] -> pure v
-  Just v -> invalid $ "Multiple values provided: " <> show v
-  Nothing -> invalid $ "Missing value"
+_booleanExpected = SProxy ∷ SProxy "urlEncodedBooleanExpected"
 
-number :: forall m. Monad m => FieldValueValidator m Number
-number = flip compose string $ hoistFnV $ \s -> case Number.fromString s of
-  Just n -> pure n
-  Nothing -> invalid $ "Could not parse " <> s <> " as number"
+boolean ∷ ∀ e m. Applicative m ⇒ Field m (urlEncodedBooleanExpected ∷ Query.Value | e) Boolean
+boolean = hoistFnV case _ of
+  Just ["on"] → pure true
+  Just ["off"] → pure false
+  Nothing → pure false
+  Just v → Validators.invalid _booleanExpected v
 
-int :: forall m. Monad m => FieldValueValidator m Int
-int = flip compose string $ hoistFnV $ \s -> case Int.fromString s of
-  Just n -> pure n
-  Nothing -> invalid $ "Could not parse " <> s <> " as int"
+_singleStringExpected = SProxy ∷ SProxy "urlEncodedSingleStringExpected"
 
-array :: forall m. Monad m => FieldValueValidator m (Array String)
+singleString ∷ ∀ e m. Applicative m ⇒ Field m (urlEncodedSingleStringExpected ∷ Maybe Query.Value | e) String
+singleString = hoistFnV $ case _ of
+  Just [v] → pure v
+  v → Validators.invalid _singleStringExpected v
+
+_nonBlankExpected = SProxy ∷ SProxy "urlEncodedNonBlankExpected"
+
+nonBlank ∷ ∀ e m. Monad m ⇒ Field m (urlEncodedNonBlankExpected ∷ Unit, urlEncodedSingleStringExpected ∷ Maybe Query.Value | e) String
+nonBlank = singleString >>> Validator.check (const $ Validators.error _nonBlankExpected unit) (not <<< eq "")
+
+_numberExpected = SProxy ∷ SProxy "urlEncodedNumberExpected"
+
+number ∷ ∀ e m. Monad m ⇒ Field m (urlEncodedSingleStringExpected ∷ Maybe Query.Value, urlEncodedNumberExpected ∷ String | e) Number
+number = singleString >>> Validator.hoistFnMaybe (Validators.error _numberExpected) Number.fromString
+
+_intExpected = SProxy ∷ SProxy "urlEncodedIntExpected"
+
+int ∷ ∀ e m. Monad m ⇒ Field m (urlEncodedSingleStringExpected ∷ Maybe Query.Value, urlEncodedIntExpected ∷ String | e) Int
+int = singleString >>> Validator.hoistFnMaybe (Validators.error _intExpected) Int.fromString
+
+array ∷ ∀ e m. Monad m ⇒ Field m e (Array String)
 array = hoistFn $ case _ of
-  Just s -> s
-  Nothing -> []
-
-optional :: forall a m. Monad m => FieldValueValidator m a -> FieldValueValidator m (Maybe a)
-optional v = hoistFnMV $ case _ of
-  Just [] -> pure (pure Nothing)
-  Nothing -> pure (pure Nothing)
-  value -> map Just <$> runValidator v value
-
-field :: forall a e m. Monad m => String -> FieldValueValidator m a -> Types.Validator m e Types.Decoded a
-field name validator =
-  hoistFnMV $ \q → do
-    let input = Map.lookup name q
-    result ← runValidator validator input
-    pure $ lmap (failure input) result
-  where
-  failure :: (Maybe (Array String)) -> Array String -> Errors (Types.Error e)
-  failure input error = [ inj Types._urlValueParsing { error, field: name, input } ]
+  Just s → s
+  Nothing → []
 

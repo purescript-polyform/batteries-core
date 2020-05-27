@@ -1,35 +1,40 @@
 module Polyform.Validators
-  ( Validator(..)
+  ( error
+  , Dual
   , Errors(..)
-  , check
-  , fail
+  , invalid
+  , Validator
   ) where
 
 import Prelude
 
-import Data.Array (singleton)
+import Data.Array (singleton) as Array
+import Data.Validation.Semigroup (V)
+import Data.Validation.Semigroup (invalid) as Validation
 import Data.Variant (Variant)
-import Data.Validation.Semigroup (invalid, unV, V)
+import Data.Variant (inj) as Variant
 import Polyform.Validator (Validator) as Polyform
-import Polyform.Validator (hoistFnMV, runValidator)
+import Polyform.Validator.Dual (Dual) as Polyform.Validator.Dual
+import Polyform.Validator (lmapValidator)
+import Prim.Row (class Cons) as Row
+import Type.Prelude (class IsSymbol, SProxy(..))
 
-type Errors e = Array (Variant e)
+type Errors errs = Array (Variant errs)
 
-type Validator m e a = Polyform.Validator m (Errors e) a
+type Validator m errs i o = Polyform.Validator m (Errors errs) i o
 
-fail ∷ ∀ e a. Variant e → V (Errors e) a
-fail e = invalid $ singleton e
+type Dual m s errs i o = Polyform.Validator.Dual.Dual m s (Errors errs) i o
 
-check
-  ∷ ∀ e m a
-  . Monoid e
-  ⇒ Monad m
-  ⇒ (a → e)
-  → Polyform.Validator m e a Boolean
-  → Polyform.Validator m e a a
-check msg pred = hoistFnMV $ \v → do
-  b ← runValidator pred v
-  pure $ unV
-    invalid
-    (if _ then pure v else invalid (msg v))
-    b
+-- | Handy shortcuts to quickly build an error or the whole failure result
+error ∷ ∀ e errs l t. Row.Cons l e t errs ⇒ IsSymbol l ⇒ SProxy l → e → Errors errs
+error l = Array.singleton <<< Variant.inj l
+
+invalid ∷ ∀ e errs l o t. Row.Cons l e t errs ⇒ IsSymbol l ⇒ SProxy l → e → V (Errors errs) o
+invalid l = Validation.invalid <<< error l
+
+_polyform = SProxy ∷ SProxy "polyform"
+
+namespaceValidator ∷ ∀ err i o m r. Monad m ⇒ Validator m err i o → Validator m (polyform ∷ Variant err | r) i o
+namespaceValidator = lmapValidator (map (Variant.inj _polyform))
+
+

@@ -2,32 +2,36 @@ module Test.Polyform.Json.Validators where
 
 import Prelude
 
-import Data.Argonaut (fromNumber, fromObject, fromString)
+import Data.Argonaut (Json, fromNumber, fromObject, fromString)
 import Data.Int (toNumber)
+import Data.Tuple (Tuple(..))
 import Data.Tuple.Nested ((/\))
 import Data.Validation.Semigroup (unV)
+import Data.Variant (inj)
+import Effect.Aff (Aff)
 import Foreign.Object (fromFoldable) as Object
-import Polyform.Json.Validators (Validator, field, int, number, object, string)
+import Global.Unsafe (unsafeStringify)
+import Polyform.Json.Validators (Segment(..), _fieldMissing, _intExpected, consErrorsPath, field, hoistErrors, int, number, object, string)
+import Polyform.Json.Validators (Validator) as Json
 import Polyform.Validator (runValidator)
 import Record.Extra (sequenceRecord)
 import Test.Unit (TestSuite, failure, test)
 import Test.Unit (suite) as Test.Unit
 import Test.Unit.Assert (equal)
 
-obj ∷ ∀ e m. Monad m ⇒ Validator m e { foo ∷ Int, bar ∷ String, baz ∷ Number }
-obj = object >>> d
-  where
-    d = sequenceRecord
-      { foo: field "foo" int
-      , bar: field "bar" string
-      , baz: field "baz" number
-      }
 
 suite ∷ TestSuite
 suite =
   Test.Unit.suite "Test.Polyform.Json.Validators" $ do
     test "Parse object" $ do
       let
+        obj = object >>> d
+          where
+            d = sequenceRecord
+              { foo: field "foo" int
+              , bar: field "bar" string
+              , baz: field "baz" number
+              }
         input = fromObject $ Object.fromFoldable
           [ "foo" /\ fromNumber (toNumber 8)
           , "bar" /\ fromString "test"
@@ -38,4 +42,52 @@ suite =
       unV
         (const $ failure "Validation failed")
         (_ `equal` expected)
+        parsed
+    test "Errors paths" $ do
+      let
+        obj ∷
+          Json.Validator
+          Aff
+           ( fieldMissing :: Unit
+           , intExpected :: Json
+           , numberExpected :: Json
+           , objectExpected :: Json
+           , stringExpected :: Json
+           )
+          Json
+          _
+
+        obj = object >>> r
+          where
+            r = sequenceRecord
+              { foo: field "foo" sub
+              , bar: field "bar" string
+              , baz: field "baz" number
+              }
+            sub = object >>> sequenceRecord
+              { x: field "x" int
+              , y: field "y" int
+              }
+
+        input = fromObject $ Object.fromFoldable
+          [ Tuple "foo" $ fromObject $ Object.fromFoldable [ "x" /\ fromString "incorrect int" ]
+          , "bar" /\ fromString "test"
+          , "baz" /\ fromNumber 8.0
+          ]
+        expectedError = consErrorsPath (Key "foo") $
+          consErrorsPath (Key "x") (hoistErrors [ inj _intExpected (fromString "incorrect int") ])
+          <> consErrorsPath (Key "y") (hoistErrors [ inj _fieldMissing unit ])
+
+      parsed ← runValidator obj input
+      unV
+        ( \err → when (err /= expectedError) $
+            failure
+              ( "Expecting \""
+              <> unsafeStringify expectedError
+              <> "\" but got: \""
+              <> unsafeStringify err
+              <> "\""
+              )
+        )
+        (const $ failure ("Validation should fail"))
         parsed
