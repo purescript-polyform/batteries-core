@@ -19,7 +19,7 @@ import Polyform.Dual (Dual(..)) as Dual
 import Polyform.Dual (dual, parser, (~))
 import Polyform.Dual.Record (build) as Dual.Record
 import Polyform.Dual.Variant (case_)
-import Polyform.Json.Duals (CoproductErrors, IncorrectVariantTag, _incorrectVariantTag, arrayOf, boolean, int, noArgs, number, object, on, string, sum, unit, (:=))
+import Polyform.Json.Duals (CoproductErrors, IncorrectTag, _incorrectTag, arrayOf, boolean, int, noArgs, number, object, on, string, sum, unit, (:=))
 import Polyform.Json.Duals (Dual, field, string) as Json.Duals
 import Polyform.Json.Duals (object) as Json.Dual
 import Polyform.Json.Validators (BooleanExpected, FieldMissing, IntExpected, NumberExpected, ObjectExpected, StringExpected, _stringExpected)
@@ -62,7 +62,7 @@ sumVariantDual
   ⇒ Json.Duals.Dual Aff s
     ( BooleanExpected
     + FieldMissing
-    + IncorrectVariantTag
+    + IncorrectTag
     + IntExpected
     + ObjectExpected
     + StringExpected
@@ -80,7 +80,7 @@ sumVariantDual = Json.Dual.object >>> tagWithValue >>> valueDual
       { t: "s", v } → runValidator (Json.Validators.string >>> Validator.liftFn (inj _s)) v
       { t: "i", v } → runValidator (Json.Validators.int >>> Validator.liftFn (inj _i)) v
       { t: "b", v } → runValidator (Json.Validators.boolean >>> Validator.liftFn (inj _b)) v
-      { t, v } → pure $ invalid $ Json.Validators.error _incorrectVariantTag t
+      { t, v } → pure $ invalid $ Json.Validators.error _incorrectTag t
 
     serializer = match
       { s: \s → pure { t: "s", v: Argounaut.fromString s }
@@ -141,7 +141,7 @@ suite =
               ( BooleanExpected
               + FieldMissing
               + IntExpected
-              + IncorrectVariantTag
+              + IncorrectTag
               + NumberExpected
               + ObjectExpected
               + StringExpected
@@ -198,11 +198,11 @@ suite =
           _json = SProxy ∷ SProxy "json"
           expectedError
             = Json.Validators.error _stringExpected (Argonaut.fromNumber 8.0)
-            <> Json.Validators.error _incorrectVariantTag "S"
-            <> Json.Validators.error _incorrectVariantTag "S"
-            <> Json.Validators.error _incorrectVariantTag "S"
-            <> Json.Validators.error _incorrectVariantTag "S"
-            <> Json.Validators.error _incorrectVariantTag "S"
+            <> Json.Validators.error _incorrectTag "S"
+            <> Json.Validators.error _incorrectTag "S"
+            <> Json.Validators.error _incorrectTag "S"
+            <> Json.Validators.error _incorrectTag "S"
+            <> Json.Validators.error _incorrectTag "S"
         parsedS' ← runValidator (parser sumD) s'
 
         unV

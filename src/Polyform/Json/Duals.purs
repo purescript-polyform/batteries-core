@@ -27,14 +27,15 @@ import Polyform.Dual.Generic.Sum (noArgs', unit') as Dual.Generic.Sum
 import Polyform.Dual.Generic.Variant (class GDualVariant)
 import Polyform.Dual.Record (Builder, insert) as Dual.Record
 import Polyform.Dual.Variant (on) as Dual.Variant
-import Polyform.Json.Validators (ArrayExpected, BooleanExpected, Errors, FieldMissing, JNull, NullExpected, NumberExpected, ObjectExpected, StringExpected, ArgonautError)
+import Polyform.Json.Validators (ArgonautError, ArrayExpected, BooleanExpected, Errors, JNull, NullExpected, NumberExpected, ObjectExpected, StringExpected, FieldMissing)
 import Polyform.Json.Validators (Errors, argonaut, array, arrayOf, boolean, error, field, fromNull, int, liftValidator, null, number, object, optionalField, string) as Json.Validators
-import Polyform.Validator (Validator, liftFnV) as Validator
+import Polyform.Type.Row (class Cons') as Row
+import Polyform.Validator (Validator, liftFn, liftFnV) as Validator
 import Polyform.Validator (valid)
 import Polyform.Validator.Dual as Validator.Dual
 import Polyform.Validator.Dual.Generic (sum, variant) as Validator.Dual.Generic
 import Polyform.Validators (Dual) as Validators
-import Prim.Row (class Cons, class Lacks) as Row
+import Prim.Row (class Cons) as Row
 import Prim.RowList (class RowToList)
 import Type.Prelude (class IsSymbol, SProxy(..), reflectSymbol)
 import Type.Row (type (+))
@@ -171,10 +172,8 @@ string = dual
   (pure <<< Argonaut.fromString)
 
 insert ∷ ∀ e l o m prs prs' s ser ser'
-  . Row.Cons l o ser ser'
-  ⇒ Row.Lacks l ser
-  ⇒ Row.Cons l o prs prs'
-  ⇒ Row.Lacks l prs
+  . Row.Cons' l o ser ser'
+  ⇒ Row.Cons' l o prs prs'
   ⇒ IsSymbol l
   ⇒ Monad m
   ⇒ Applicative s
@@ -193,10 +192,8 @@ insert label dual =
 infix 10 insert as :=
 
 insertOptional ∷ ∀ e m l o prs prs' s ser ser'
-  . Row.Cons l (Maybe o) ser ser'
-  ⇒ Row.Lacks l ser
-  ⇒ Row.Cons l (Maybe o) prs prs'
-  ⇒ Row.Lacks l prs
+  . Row.Cons' l (Maybe o) ser ser'
+  ⇒ Row.Cons' l (Maybe o) prs prs'
   ⇒ IsSymbol l
   ⇒ Monad m
   ⇒ Monad s
@@ -204,7 +201,6 @@ insertOptional ∷ ∀ e m l o prs prs' s ser ser'
   → Dual m s e Json o
   → Dual.Record.Builder
     (Validator.Validator m (Json.Validators.Errors e))
-    -- (Polyform.Validator m (Validators.Errors (JsonError e)))
     s
     (Object Json)
     { | ser'}
@@ -215,7 +211,27 @@ insertOptional label dual =
 
 infix 10 insertOptional as :=?
 
-type CoproductErrors e = (IncorrectVariantTag + StringExpected + FieldMissing + ObjectExpected + e)
+insertConst ∷ ∀ e l o m prs prs' s ser ser'
+  . Row.Cons' l o ser ser'
+  ⇒ Row.Cons' l o prs prs'
+  ⇒ IsSymbol l
+  ⇒ Monad m
+  ⇒ Applicative s
+  ⇒ SProxy l
+  → o
+  → Dual.Record.Builder
+    (Validator.Validator m (Json.Validators.Errors (FieldMissing + e)))
+    s
+    (Object Json)
+    { | ser'}
+    { | prs}
+    { | prs'}
+insertConst label a = label := (dual prs ser)
+  where
+    ser = const $ pure jsonNull
+    prs = Validator.liftFn (const a)
+
+type CoproductErrors e = (IncorrectTag + StringExpected + FieldMissing + ObjectExpected + e)
 
 variant
   ∷ ∀ e d dl m s v
@@ -236,9 +252,9 @@ sum ∷ ∀ a m e rep r s
   → Dual m s (CoproductErrors + e) Json a
 sum = Validator.Dual.Generic.sum tagged
 
-_incorrectVariantTag = SProxy ∷ SProxy "incorrectVariantTag"
+_incorrectTag = SProxy ∷ SProxy "incorrectTag"
 
-type IncorrectVariantTag e = (incorrectVariantTag ∷ String | e)
+type IncorrectTag e = (incorrectTag ∷ String | e)
 
 tagged
   ∷ ∀ a e l m s. Monad m
@@ -259,7 +275,7 @@ tagged label (Dual.Dual (Dual.DualD prs ser))  =
         fieldName = reflectSymbol label
         ser' = map { t: fieldName, v: _ } <<< ser
         prs' = prs <<< Validator.liftFnV \{ t, v } → if fieldName /= t
-          then invalid $ Json.Validators.error _incorrectVariantTag t
+          then invalid $ Json.Validators.error _incorrectTag t
           else valid v
       in
         dual prs' ser'
@@ -288,36 +304,6 @@ argonaut = dual Json.Validators.argonaut ser
   where
     ser = (pure <<< encodeJson)
 
-
--- -- | TODO:
--- -- | * alias signature types
--- constField ∷ ∀ e l o m prs prs' s ser ser'
---   . Row.Cons l o ser ser'
---   ⇒ Row.Lacks l ser
---   ⇒ Row.Cons l o prs prs'
---   ⇒ Row.Lacks l prs
---   ⇒ IsSymbol l
---   ⇒ Monad m
---   ⇒ Applicative s
---   ⇒ SProxy l
---   → o
---   → Dual.Record.Builder
---     (Polyform.Validator m (Validators.Errors (JsonError e)))
---     s
---     (Object Json)
---     { | ser'}
---     { | prs}
---     { | prs'}
--- constField label a = label := (dual prs ser)
---   where
---     ser = const $ pure jsonNull
---     -- | Do we want to really validate this??
---     prs = liftFnMV $ \i → pure (valid a)
---       -- if isNull i
---       -- then pure (valid a)
---       -- else pure $
---       --   failure ("expecting null value as constant encoding")
--- 
 
 -- decode ∷ ∀ a e. JsonDual Identity Identity e a → Json → Either (Validators.Errors (JsonError + e)) a
 -- decode dual j =
