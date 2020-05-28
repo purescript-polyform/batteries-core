@@ -4,6 +4,7 @@
 -- |
 module Polyform.Batteries.UrlEncoded.Validators
   ( BooleanExpected
+  , Field
   , IntExpected
   , SingleValueExpected
   , _booleanExpected
