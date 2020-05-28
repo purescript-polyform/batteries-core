@@ -1,4 +1,4 @@
-module Polyform.Json.Duals where
+module Polyform.Batteries.Json.Duals where
 
 import Prelude
 
@@ -20,6 +20,8 @@ import Data.Validation.Semigroup (invalid)
 import Data.Variant (Variant)
 import Foreign.Object (Object) as Foreign
 import Foreign.Object (singleton) as Object
+import Polyform.Batteries.Json.Validators (ArgonautError, ArrayExpected, BooleanExpected, Errors, JNull, NullExpected, NumberExpected, ObjectExpected, StringExpected, FieldMissing)
+import Polyform.Batteries.Json.Validators (Errors, argonaut, array, arrayOf, boolean, error, field, fromNull, int, liftValidator, null, number, object, optionalField, string) as Json.Validators
 import Polyform.Dual (Dual(..), DualD(..), hoistParser) as Dual
 import Polyform.Dual (dual, (~))
 import Polyform.Dual.Generic.Sum (class GDualSum)
@@ -27,14 +29,11 @@ import Polyform.Dual.Generic.Sum (noArgs', unit') as Dual.Generic.Sum
 import Polyform.Dual.Generic.Variant (class GDualVariant)
 import Polyform.Dual.Record (Builder, insert) as Dual.Record
 import Polyform.Dual.Variant (on) as Dual.Variant
-import Polyform.Json.Validators (ArgonautError, ArrayExpected, BooleanExpected, Errors, JNull, NullExpected, NumberExpected, ObjectExpected, StringExpected, FieldMissing)
-import Polyform.Json.Validators (Errors, argonaut, array, arrayOf, boolean, error, field, fromNull, int, liftValidator, null, number, object, optionalField, string) as Json.Validators
 import Polyform.Type.Row (class Cons') as Row
 import Polyform.Validator (Validator, liftFn, liftFnV) as Validator
-import Polyform.Validator (valid)
 import Polyform.Validator.Dual as Validator.Dual
 import Polyform.Validator.Dual.Generic (sum, variant) as Validator.Dual.Generic
-import Polyform.Validators (Dual) as Validators
+import Polyform.Batteries (Dual) as Batteries
 import Prim.Row (class Cons) as Row
 import Prim.RowList (class RowToList)
 import Type.Prelude (class IsSymbol, SProxy(..), reflectSymbol)
@@ -45,7 +44,7 @@ type Dual m s errs a b = Validator.Dual.Dual m s (Errors errs) a b
 -- | Please check `Json.Validator.fromValidator`
 fromDual
   ∷ ∀ errs i m o s. Monad m
-  ⇒ Validators.Dual m s errs i o
+  ⇒ Batteries.Dual m s errs i o
   → Dual m s errs i o
 fromDual = Dual.hoistParser Json.Validators.liftValidator
 
@@ -276,7 +275,7 @@ tagged label (Dual.Dual (Dual.DualD prs ser))  =
         ser' = map { t: fieldName, v: _ } <<< ser
         prs' = prs <<< Validator.liftFnV \{ t, v } → if fieldName /= t
           then invalid $ Json.Validators.error _incorrectTag t
-          else valid v
+          else pure v
       in
         dual prs' ser'
 
@@ -303,7 +302,6 @@ argonaut ∷ ∀ a e m s. Monad m ⇒ Applicative s ⇒ EncodeJson a ⇒ DecodeJ
 argonaut = dual Json.Validators.argonaut ser
   where
     ser = (pure <<< encodeJson)
-
 
 -- decode ∷ ∀ a e. JsonDual Identity Identity e a → Json → Either (Validators.Errors (JsonError + e)) a
 -- decode dual j =

@@ -3,16 +3,16 @@ module Test.Main where
 import Prelude
 
 import Effect (Effect)
-import Test.Polyform.Decimal (suite) as Test.Polyform.Decimal
+import Test.Polyform.Batteries.Decimal (suite) as Test.Polyform.Batteries.Decimal
 import Test.Unit.Main (runTest)
-import Test.Polyform.Json.Validators (suite) as Test.Polyform.Json.Validators
-import Test.Polyform.Json.Duals (suite) as Test.Polyform.Json.Duals
+import Test.Polyform.Batteries.Json.Validators (suite) as Test.Polyform.Batteries.Json.Validators
+import Test.Polyform.Batteries.Json.Duals (suite) as Test.Polyform.Batteries.Json.Duals
 
 main ∷ Effect Unit
 main = runTest $ do
-  Test.Polyform.Decimal.suite
-  Test.Polyform.Json.Validators.suite
-  Test.Polyform.Json.Duals.suite
+  Test.Polyform.Batteries.Decimal.suite
+  Test.Polyform.Batteries.Json.Validators.suite
+  Test.Polyform.Batteries.Json.Duals.suite
 
 -- import Data.Argonaut (fromBoolean, fromNumber) as Argonaut
 -- import Data.Argonaut (fromBoolean, fromNumber, fromObject, fromString, stringify, toObject)

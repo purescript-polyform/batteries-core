@@ -1,4 +1,4 @@
-module Polyform.Decimal where
+module Polyform.Batteries.Decimal where
 
 import Prelude
 
@@ -15,8 +15,7 @@ import Polyform.Data.String (reverseCodeUnits) as String
 import Polyform.Data.String.Regex (escape) as Regex
 import Polyform.Dual (dual) as Dual
 import Polyform.Validator (liftFnMaybe) as Validator
-import Polyform.Validators (Validator, Dual) as Validators
-import Polyform.Validators (error) as Polyform.Validtors
+import Polyform.Batteries (error, Validator, Dual) as Batteries
 import Type.Prelude (SProxy(..))
 
 newtype Formatting = Formatting
@@ -87,16 +86,16 @@ validator
   ∷ ∀ e m
   . Applicative m
   ⇒ Formatting
-  → Validators.Validator m (decimal ∷ String | e) String Decimal
+  → Batteries.Validator m (decimal ∷ String | e) String Decimal
 validator (Formatting { parse: p }) =
-  Validator.liftFnMaybe (Polyform.Validtors.error _decimal) p
+  Validator.liftFnMaybe (Batteries.error _decimal) p
 
 dual
   ∷ ∀ e m s
   . Applicative m
   ⇒ Applicative s
   ⇒ Formatting
-  → Validators.Dual m s (decimal ∷ String | e) String Decimal
+  → Batteries.Dual m s (decimal ∷ String | e) String Decimal
 dual (fmt@(Formatting { print: p })) =
   Dual.dual (validator fmt) (p >>> pure)
 
@@ -108,7 +107,7 @@ dual (fmt@(Formatting { print: p })) =
 -- | validatorReader
 -- |   ∷ ∀ ctx errs m polyformCtx
 -- |   . MonadAsk { polyform ∷ { decimal ∷ Formatting | polyformCtx } | ctx } m
--- |   ⇒ Validators.Validator
+-- |   ⇒ Batteries.Validator
 -- |     m
 -- |     ( decimal ∷ String | errs )
 -- |     String
@@ -126,7 +125,7 @@ dual (fmt@(Formatting { print: p })) =
 -- |   ∷ ∀ ctx errs m polyformCtx s
 -- |   . MonadAsk { polyform ∷ { decimal ∷ Formatting | polyformCtx } | ctx } m
 -- |   ⇒ MonadAsk { polyform ∷ { decimal ∷ Formatting | polyformCtx } | ctx } s
--- |   ⇒ Validators.Dual
+-- |   ⇒ Batteries.Dual
 -- |     m
 -- |     s
 -- |     ( decimal ∷ String | errs )

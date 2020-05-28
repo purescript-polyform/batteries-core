@@ -1,4 +1,4 @@
-module Test.Polyform.Json.Validators where
+module Test.Polyform.Batteries.Json.Validators where
 
 import Prelude
 
@@ -11,8 +11,8 @@ import Data.Variant (inj)
 import Effect.Aff (Aff)
 import Foreign.Object (fromFoldable) as Object
 import Global.Unsafe (unsafeStringify)
-import Polyform.Json.Validators (Segment(..), _fieldMissing, _intExpected, consErrorsPath, field, liftErrors, int, number, object, string)
-import Polyform.Json.Validators (Validator) as Json
+import Polyform.Batteries.Json.Validators (Segment(..), _fieldMissing, _intExpected, consErrorsPath, field, liftErrors, int, number, object, string)
+import Polyform.Batteries.Json.Validators (Validator) as Json
 import Polyform.Validator (runValidator)
 import Record.Extra (sequenceRecord)
 import Test.Unit (TestSuite, failure, test)

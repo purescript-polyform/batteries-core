@@ -1,4 +1,4 @@
-module Polyform.Validators.Affjax where
+module Polyform.Batteries.Validators.Affjax where
 
 import Prelude
 

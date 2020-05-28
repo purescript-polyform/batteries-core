@@ -1,4 +1,4 @@
-module Test.Polyform.Json.Duals where
+module Test.Polyform.Batteries.Json.Duals where
 
 import Prelude hiding (unit)
 
@@ -15,15 +15,14 @@ import Data.Variant (Variant, inj, match)
 import Effect.Aff (Aff)
 import Foreign.Object (fromFoldable) as Object
 import Global.Unsafe (unsafeStringify)
+import Polyform.Batteries.Json.Duals (CoproductErrors, IncorrectTag, _incorrectTag, arrayOf, boolean, int, noArgs, number, object, on, string, sum, unit, (:=))
+import Polyform.Batteries.Json.Duals (Dual, field, object, string) as Json.Duals
+import Polyform.Batteries.Json.Validators (BooleanExpected, FieldMissing, IntExpected, NumberExpected, ObjectExpected, StringExpected, _stringExpected)
+import Polyform.Batteries.Json.Validators (boolean, error, int, string) as Json.Validators
 import Polyform.Dual (Dual(..)) as Dual
 import Polyform.Dual (dual, parser, (~))
 import Polyform.Dual.Record (build) as Dual.Record
 import Polyform.Dual.Variant (case_)
-import Polyform.Json.Duals (CoproductErrors, IncorrectTag, _incorrectTag, arrayOf, boolean, int, noArgs, number, object, on, string, sum, unit, (:=))
-import Polyform.Json.Duals (Dual, field, string) as Json.Duals
-import Polyform.Json.Duals (object) as Json.Dual
-import Polyform.Json.Validators (BooleanExpected, FieldMissing, IntExpected, NumberExpected, ObjectExpected, StringExpected, _stringExpected)
-import Polyform.Json.Validators (boolean, error, int, string) as Json.Validators
 import Polyform.Validator (liftFn) as Validator
 import Polyform.Validator (liftFnMV) as Validtor
 import Polyform.Validator (runValidator)
@@ -70,7 +69,7 @@ sumVariantDual
     )
     Json
     (Variant (s ∷ String, b ∷ Boolean, i ∷ Int))
-sumVariantDual = Json.Dual.object >>> tagWithValue >>> valueDual
+sumVariantDual = Json.Duals.object >>> tagWithValue >>> valueDual
   where
     tagWithValue = Dual.Dual $ { t: _, v: _ }
       <$> _.t ~ Json.Duals.field "tag" Json.Duals.string

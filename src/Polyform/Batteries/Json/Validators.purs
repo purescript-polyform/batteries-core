@@ -1,4 +1,4 @@
-module Polyform.Json.Validators
+module Polyform.Batteries.Json.Validators
   ( ArgonautError
   , ArrayExpected
   , BooleanExpected
@@ -68,7 +68,7 @@ import Foreign.Object (Object)
 import Foreign.Object (lookup) as Object
 import Polyform.Validator (Validator, liftFn, liftFnEither, liftFnMaybe) as Validator
 import Polyform.Validator (liftFnMV, liftFnMaybe, lmapValidator, runValidator)
-import Polyform.Validators (Errors, Validator) as Validators
+import Polyform.Batteries (Errors, Validator) as Batteries
 import Prim.Row (class Cons) as Row
 import Type.Prelude (class IsSymbol)
 import Type.Row (type (+))
@@ -103,7 +103,7 @@ type Validator m errs i o = Validator.Validator m (Errors errs) i o
 -- | nonBlankString ∷ ∀ e m. Monad m ⇒ Validator m (stringExpected ∷ Json, nonBlankExpected ∷ Unit | e) Json String
 -- | nonBlankString = fromValidator String.nonBlank <<< string
 -- | ```
-liftValidator ∷ ∀ errs m i. Monad m ⇒ Validators.Validator m errs i ~> Validator m errs i
+liftValidator ∷ ∀ errs m i. Monad m ⇒ Batteries.Validator m errs i ~> Validator m errs i
 liftValidator = lmapValidator liftErrors
 
 error ∷ ∀ errs e l r.  Row.Cons l e r errs ⇒ IsSymbol l ⇒ SProxy l → e → Errors errs
@@ -112,7 +112,7 @@ error label
   <<< Array.singleton
   <<< Variant.inj label
 
-liftErrors ∷ ∀ errs. Validators.Errors errs → Errors errs
+liftErrors ∷ ∀ errs. Batteries.Errors errs → Errors errs
 liftErrors = Array.singleton <<< { path: Nil, errors: _ }
 
 consErrorsPath ∷ ∀ e. Segment → Errors e → Errors e

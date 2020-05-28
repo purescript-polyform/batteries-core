@@ -1,4 +1,4 @@
-module Polyform.Validators
+module Polyform.Batteries
   ( error
   , Dual
   , Errors(..)
