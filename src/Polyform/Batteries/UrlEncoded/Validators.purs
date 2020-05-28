@@ -5,11 +5,9 @@
 module Polyform.Batteries.UrlEncoded.Validators
   ( BooleanExpected
   , IntExpected
-  , NumberExpected
   , SingleValueExpected
   , _booleanExpected
   , _intExpected
-  , _numberExpected
   , _singleValueExpected
   , array
   , boolean
@@ -26,12 +24,13 @@ import Prelude
 
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
-import Data.Number as Number
 import Polyform.Batteries (Validator, error, invalid) as Batteries
+import Polyform.Batteries.Number (NumberExpected)
+import Polyform.Batteries.Number (validator) as Batteries.Number
 import Polyform.Batteries.UrlEncoded.Query (Decoded(..), Key, Value, lookup) as Query
 import Polyform.Batteries.UrlEncoded.Types (Validator, fromValidator)
-import Polyform.Validator (liftFn, liftFnMaybe) as Validator
 import Polyform.Validator (liftFn, liftFnMV, liftFnV, runValidator)
+import Polyform.Validator (liftFn, liftFnMaybe) as Validator
 import Type.Prelude (SProxy(..))
 import Type.Row (type (+))
 
@@ -72,12 +71,8 @@ singleValue = liftFnV $ case _ of
   Just [v] → pure v
   v → Batteries.invalid _singleValueExpected v
 
-_numberExpected = SProxy ∷ SProxy "numberExpected"
-
-type NumberExpected e = (numberExpected ∷ String | e)
-
 number ∷ ∀ e m. Monad m ⇒ Field m (SingleValueExpected + NumberExpected + e) Number
-number = singleValue >>> Validator.liftFnMaybe (Batteries.error _numberExpected) Number.fromString
+number = singleValue >>> Batteries.Number.validator
 
 _intExpected = SProxy ∷ SProxy "intExpected"
 
