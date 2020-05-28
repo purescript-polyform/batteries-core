@@ -6,7 +6,7 @@ import Polyform.Batteries (Validator) as Batteries
 import Polyform.Batteries.Eq.Validators (NotEqualToErr)
 import Polyform.Batteries.Eq.Validators (differentThan, equalTo, missingFrom, oneOf) as Generic.Eq.Validators
 import Polyform.Batteries.Generic.Ord.Validators (NotGreaterThanErr, NotInRangeErr, NotSmallerThanErr, Range, greaterThan, inRange, smallerThan) as Generic.Ord.Validators
-import Polyform.Batteries.Monoid.Validators (isEmpty, isNotEmpty) as Generic.Monoid.Validators
+import Polyform.Batteries.Generic.Monoid.Validators (isEmpty, isNotEmpty) as Generic.Monoid.Validators
 import Type.Prelude (SProxy(..))
 import Type.Row (type (+))
 
