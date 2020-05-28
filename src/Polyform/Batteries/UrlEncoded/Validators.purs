@@ -3,20 +3,22 @@
 -- | so it should be useful in the context of HTML form validation.
 -- |
 module Polyform.Batteries.UrlEncoded.Validators
-  ( _booleanExpected
+  ( BooleanExpected
+  , IntExpected
+  , NumberExpected
+  , SingleValueExpected
+  , _booleanExpected
   , _intExpected
-  , _nonBlankExpected
   , _numberExpected
-  , _singleStringExpected
+  , _singleValueExpected
   , array
   , boolean
   , field
   , int
   , module Query
-  , nonBlank
   , number
   , optionalField
-  , singleString
+  , singleValue
   )
   where
 
@@ -28,7 +30,7 @@ import Data.Number as Number
 import Polyform.Batteries (Validator, error, invalid) as Batteries
 import Polyform.Batteries.UrlEncoded.Query (Decoded(..), Key, Value, lookup) as Query
 import Polyform.Batteries.UrlEncoded.Types (Validator, fromValidator)
-import Polyform.Validator (check, liftFn, liftFnMaybe) as Validator
+import Polyform.Validator (liftFn, liftFnMaybe) as Validator
 import Polyform.Validator (liftFn, liftFnMV, liftFnV, runValidator)
 import Type.Prelude (SProxy(..))
 import Type.Row (type (+))
@@ -61,29 +63,28 @@ boolean = liftFnV case _ of
   Nothing → pure false
   Just v → Batteries.invalid _booleanExpected v
 
-_singleStringExpected = SProxy ∷ SProxy "singleStringExpected"
+_singleValueExpected = SProxy ∷ SProxy "singleValueExpected"
 
-type SingleStringExpected e = (singleStringExpected ∷ Maybe Query.Value | e)
+type SingleValueExpected e = (singleValueExpected ∷ Maybe Query.Value | e)
 
-singleString ∷ ∀ e m. Applicative m ⇒ Field m (SingleStringExpected + e) String
-singleString = liftFnV $ case _ of
+singleValue ∷ ∀ e m. Applicative m ⇒ Field m (SingleValueExpected + e) String
+singleValue = liftFnV $ case _ of
   Just [v] → pure v
-  v → Batteries.invalid _singleStringExpected v
-
-_nonBlankExpected = SProxy ∷ SProxy "nonBlankExpected"
-
-nonBlank ∷ ∀ e m. Monad m ⇒ Field m (nonBlankExpected ∷ Unit, singleStringExpected ∷ Maybe Query.Value | e) String
-nonBlank = singleString >>> Validator.check (const $ Batteries.error _nonBlankExpected unit) (not <<< eq "")
+  v → Batteries.invalid _singleValueExpected v
 
 _numberExpected = SProxy ∷ SProxy "numberExpected"
 
-number ∷ ∀ e m. Monad m ⇒ Field m (singleStringExpected ∷ Maybe Query.Value, numberExpected ∷ String | e) Number
-number = singleString >>> Validator.liftFnMaybe (Batteries.error _numberExpected) Number.fromString
+type NumberExpected e = (numberExpected ∷ String | e)
+
+number ∷ ∀ e m. Monad m ⇒ Field m (SingleValueExpected + NumberExpected + e) Number
+number = singleValue >>> Validator.liftFnMaybe (Batteries.error _numberExpected) Number.fromString
 
 _intExpected = SProxy ∷ SProxy "intExpected"
 
-int ∷ ∀ e m. Monad m ⇒ Field m (singleStringExpected ∷ Maybe Query.Value, intExpected ∷ String | e) Int
-int = singleString >>> Validator.liftFnMaybe (Batteries.error _intExpected) Int.fromString
+type IntExpected e = (intExpected ∷ String | e)
+
+int ∷ ∀ e m. Monad m ⇒ Field m (SingleValueExpected + IntExpected + e) Int
+int = singleValue >>> Validator.liftFnMaybe (Batteries.error _intExpected) Int.fromString
 
 array ∷ ∀ e m. Monad m ⇒ Field m e (Array String)
 array = liftFn $ case _ of

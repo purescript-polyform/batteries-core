@@ -6,6 +6,7 @@ import Polyform.Batteries (Validator) as Batteries
 import Polyform.Batteries.Eq.Validators (NotEqualToErr)
 import Polyform.Batteries.Eq.Validators (differentThan, equalTo, missingFrom, oneOf) as Generic.Eq.Validators
 import Polyform.Batteries.Generic.Ord.Validators (NotGreaterThanErr, NotInRangeErr, NotSmallerThanErr, Range, greaterThan, inRange, smallerThan) as Generic.Ord.Validators
+import Polyform.Batteries.Monoid.Validators (isEmpty, isNotEmpty) as Generic.Monoid.Validators
 import Type.Prelude (SProxy(..))
 import Type.Row (type (+))
 
@@ -85,4 +86,24 @@ missingFrom
   ⇒ Array String
   → Batteries.Validator m (NotMissingFrom + e) String String
 missingFrom = Generic.Eq.Validators.missingFrom _notMissingFrom
+
+type NotEmptyExpected e = (stringNotEmptyExpected ∷ Unit | e)
+
+_nonEmptyExpected = SProxy ∷ SProxy "stringNotEmptyExpected"
+
+isNotEmpty
+  ∷ ∀ m e
+  . Applicative m
+  ⇒ Batteries.Validator m (NotEmptyExpected + e) String String
+isNotEmpty = Generic.Monoid.Validators.isNotEmpty _nonEmptyExpected
+
+type EmptyExpected e = (stringEmptyExpected ∷ String | e)
+
+_emptyExpected = SProxy ∷ SProxy "stringEmptyExpected"
+
+isEmpty
+  ∷ ∀ m e
+  . Applicative m
+  ⇒ Batteries.Validator m (EmptyExpected + e) String String
+isEmpty = Generic.Monoid.Validators.isEmpty _emptyExpected
 
