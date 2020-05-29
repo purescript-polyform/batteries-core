@@ -7,7 +7,6 @@ import Data.Argonaut (fromBoolean, fromNumber) as Argonaut
 import Data.Argonaut (fromString) as Argounaut
 import Data.Generic.Rep (class Generic)
 import Data.Generic.Rep.Show (genericShow)
-import Data.Identity (Identity)
 import Data.Int (toNumber)
 import Data.Tuple.Nested ((/\))
 import Data.Validation.Semigroup (invalid, unV)
@@ -48,17 +47,17 @@ _u = SProxy ∷ SProxy "u"
 _i = SProxy ∷ SProxy "i"
 
 variant
-  ∷ forall e m s. Monad s
-  ⇒ Monad m
-  ⇒ Json.Duals.Dual m s (CoproductErrors + IntExpected + e) Json (Variant (i ∷ Int, s ∷ String, u ∷ Unit))
+  ∷ forall e m
+  . Monad m
+  ⇒ Json.Duals.Dual m (CoproductErrors + IntExpected + e) Json (Variant (i ∷ Int, s ∷ String, u ∷ Unit))
 variant = case_
   # on (SProxy ∷ SProxy "s") string
   # on (SProxy ∷ SProxy "u") unit
   # on (SProxy ∷ SProxy "i") int
 
 sumVariantDual
-  ∷ ∀ e s. Monad s
-  ⇒ Json.Duals.Dual Aff s
+  ∷ ∀ e
+  . Json.Duals.Dual Aff
     ( BooleanExpected
     + FieldMissing
     + IncorrectTag
@@ -97,7 +96,7 @@ suite =
       let
         obj
           ∷ ∀ e
-          . Json.Duals.Dual Aff Identity
+          . Json.Duals.Dual Aff
             ( FieldMissing
             + IntExpected
             + NumberExpected
@@ -136,7 +135,6 @@ suite =
           sumD
             ∷ Json.Duals.Dual
               Aff
-              Identity
               ( BooleanExpected
               + FieldMissing
               + IntExpected

@@ -26,43 +26,42 @@ import Polyform.Dual (dual)
 import Polyform.Dual (parser, serializer) as Dual
 import Type.Row (type (+))
 
-type Field m s e b = Batteries.Dual m s e (Maybe Query.Value) b
+type Field m e b = Batteries.Dual m e (Maybe Query.Value) b
 
 field
-  ∷ ∀ a e m s
+  ∷ ∀ a e m
   . Monad m
-  ⇒ Applicative s
   ⇒ Query.Key
-  → Field m s e a
-  → Dual m s e Query.Decoded a
+  → Field m e a
+  → Dual m e Query.Decoded a
 field name d = dual
   (Validators.field name (Dual.parser d))
   ( map (Query.Decoded <<< Map.singleton name <<< fromMaybe [])
   <<< Dual.serializer d
   )
 
-boolean ∷ ∀ e m s. Monad m ⇒ Applicative s ⇒ Field m s (BooleanExpected + e) Boolean
+boolean ∷ ∀ e m. Monad m ⇒ Field m (BooleanExpected + e) Boolean
 boolean = dual
   Validators.boolean
   (pure <<< if _ then Just ["on"] else Just ["off"])
 
-singleValue ∷ ∀ e m s. Monad m ⇒ Applicative s ⇒ Field m s (SingleValueExpected + e) String
+singleValue ∷ ∀ e m. Monad m ⇒ Field m (SingleValueExpected + e) String
 singleValue = dual Validators.singleValue (pure <<< Just <<< Array.singleton)
 
-number ∷ ∀ e m s. Monad m ⇒ Monad s ⇒ Field m s (SingleValueExpected + NumberExpected + e) Number
+number ∷ ∀ e m. Monad m ⇒ Field m (SingleValueExpected + NumberExpected + e) Number
 number = Batteries.Number.dual Nothing <<< singleValue
 
-int ∷ ∀ e m s. Monad m ⇒ Applicative s ⇒ Field m s (SingleValueExpected + IntExpected + e) Int
+int ∷ ∀ e m. Monad m ⇒ Field m (SingleValueExpected + IntExpected + e) Int
 int = dual
   Validators.int
   (pure <<< Just <<< Array.singleton <<< show)
 
-array ∷ ∀ e m s. Monad m ⇒ Applicative s ⇒ Field m s e (Array String)
+array ∷ ∀ e m. Monad m ⇒ Field m e (Array String)
 array = dual
   Validators.array
   (pure <<< Just)
 
-optionalField ∷ ∀ a e m s. Monad m ⇒ Applicative s ⇒ Field m s e a → Field m s e (Maybe a)
+optionalField ∷ ∀ a e m. Monad m ⇒ Field m e a → Field m e (Maybe a)
 optionalField d = dual
   (Validators.optionalField (Dual.parser d))
   (case _ of

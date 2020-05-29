@@ -39,13 +39,13 @@ import Prim.RowList (class RowToList)
 import Type.Prelude (class IsSymbol, SProxy(..), reflectSymbol)
 import Type.Row (type (+))
 
-type Dual m s errs a b = Validator.Dual.Dual m s (Errors errs) a b
+type Dual m errs a b = Validator.Dual.Dual m (Errors errs) a b
 
 -- | Please check `Json.Validator.fromValidator`
 fromDual
-  ∷ ∀ errs i m o s. Monad m
-  ⇒ Batteries.Dual m s errs i o
-  → Dual m s errs i o
+  ∷ ∀ errs i m o. Monad m
+  ⇒ Batteries.Dual m errs i o
+  → Dual m errs i o
 fromDual = Dual.hoistParser Json.Validators.liftValidator
 
 -- | We want to have Monoid for `Object` so we
@@ -58,10 +58,9 @@ fromDual = Dual.hoistParser Json.Validators.liftValidator
 type Object a = Foreign.Object (First a)
 
 object
-  ∷ ∀ errs m s
+  ∷ ∀ errs m
   . Monad m
-  ⇒ Applicative s
-  ⇒ Dual m s (objectExpected ∷ Json | errs) Json (Object Json)
+  ⇒ Dual m (objectExpected ∷ Json | errs) Json (Object Json)
 object = dual
   (map First <$> Json.Validators.object)
   (pure <<< Argonaut.fromObject <<< map runFirst)
@@ -72,12 +71,11 @@ object = dual
 -- | `Semigroup` instance which based on value `Semigroup`.
 -- | We use just left bias union here.
 field
-  ∷ ∀ a e m s
+  ∷ ∀ a e m
   . Monad m
-  ⇒ Applicative s
   ⇒ String
-  → Dual m s (FieldMissing + e) Json a
-  → Dual m s (FieldMissing + e) (Object Json) a
+  → Dual m (FieldMissing + e) Json a
+  → Dual m (FieldMissing + e) (Object Json) a
 field label d =
   dual prs ser
   where
@@ -89,11 +87,11 @@ field label d =
     ser = map (Object.singleton label <<< First) <<< fieldSer
 
 optionalField
-  ∷ ∀ a err m s. Monad m
-  ⇒ Monad s
+  ∷ ∀ a err m
+  . Monad m
   ⇒ String
-  → Dual m s err Json a
-  → Dual m s err (Object Json) (Maybe a)
+  → Dual m err Json a
+  → Dual m err (Object Json) (Maybe a)
 optionalField label d =
   dual prs ser
   where
@@ -103,84 +101,77 @@ optionalField label d =
       (map (un First))
       (Json.Validators.optionalField label fieldPrs)
 
-    vSer ∷ Maybe a → s Json
+    vSer ∷ Maybe a → m Json
     vSer = un Star $ (Star pure ||| Star fieldSer) <<< Star (pure <<< note jsonNull)
 
     ser = pure <<< (Object.singleton label <<< First) <=< vSer
 
 null
-  ∷ ∀ errs m s. Monad m
-  ⇒ Applicative s
-  ⇒ Dual m s (NullExpected + errs) Json JNull
+  ∷ ∀ errs m
+  . Monad m
+  ⇒ Dual m (NullExpected + errs) Json JNull
 null = dual
   Json.Validators.null
   (pure <<< Json.Validators.fromNull)
 
 array
-  ∷ ∀ errs m s
+  ∷ ∀ errs m
   . Monad m
-  ⇒ Applicative s
-  ⇒ Dual m s (ArrayExpected + errs) Json (Array Json)
+  ⇒ Dual m (ArrayExpected + errs) Json (Array Json)
 array = dual
   Json.Validators.array
   (pure <<< Argonaut.fromArray)
 
 arrayOf
-  ∷ ∀ e o m s
+  ∷ ∀ e o m
   . Monad m
-  ⇒ Applicative s
-  ⇒ Dual m s (ArrayExpected + e) Json o
-  → Dual m s (ArrayExpected + e) Json (Array o)
+  ⇒ Dual m (ArrayExpected + e) Json o
+  → Dual m (ArrayExpected + e) Json (Array o)
 arrayOf (Dual.Dual (Dual.DualD prs ser)) =
   dual (Json.Validators.arrayOf prs) (map Argonaut.fromArray <<< traverse ser)
 
 int
-  ∷ ∀ errs m s
+  ∷ ∀ errs m
   . Monad m
-  ⇒ Applicative s
-  ⇒ Dual m s (intExpected ∷ Json | errs) Json Int
+  ⇒ Dual m (intExpected ∷ Json | errs) Json Int
 int = dual
   Json.Validators.int
   (pure <<< Argonaut.fromNumber <<< Int.toNumber)
 
 boolean
-  ∷ ∀ errs m s
+  ∷ ∀ errs m
   . Monad m
-  ⇒ Applicative s
-  ⇒ Dual m s (BooleanExpected + errs) Json Boolean
+  ⇒ Dual m (BooleanExpected + errs) Json Boolean
 boolean = dual
   Json.Validators.boolean
   (pure <<< Argonaut.fromBoolean)
 
 number
-  ∷ ∀ errs m s
+  ∷ ∀ errs m
   . Monad m
-  ⇒ Applicative s
-  ⇒ Dual m s (NumberExpected + errs) Json Number
+  ⇒ Dual m (NumberExpected + errs) Json Number
 number = dual
   Json.Validators.number
   (pure <<< Argonaut.fromNumber)
 
 string
-  ∷ ∀ errs m s
+  ∷ ∀ errs m
   . Monad m
-  ⇒ Applicative s
-  ⇒ Dual m s (StringExpected + errs) Json String
+  ⇒ Dual m (StringExpected + errs) Json String
 string = dual
   Json.Validators.string
   (pure <<< Argonaut.fromString)
 
-insert ∷ ∀ e l o m prs prs' s ser ser'
+insert ∷ ∀ e l o m prs prs' ser ser'
   . Row.Cons' l o ser ser'
   ⇒ Row.Cons' l o prs prs'
   ⇒ IsSymbol l
   ⇒ Monad m
-  ⇒ Applicative s
   ⇒ SProxy l
-  → Dual m s (FieldMissing + e) Json o
+  → Dual m (FieldMissing + e) Json o
   → Dual.Record.Builder
     (Validator.Validator m (Json.Validators.Errors (FieldMissing + e)))
-    s
+    m
     (Object Json)
     { | ser'}
     { | prs}
@@ -190,17 +181,16 @@ insert label dual =
 
 infix 10 insert as :=
 
-insertOptional ∷ ∀ e m l o prs prs' s ser ser'
+insertOptional ∷ ∀ e m l o prs prs' ser ser'
   . Row.Cons' l (Maybe o) ser ser'
   ⇒ Row.Cons' l (Maybe o) prs prs'
   ⇒ IsSymbol l
   ⇒ Monad m
-  ⇒ Monad s
   ⇒ SProxy l
-  → Dual m s e Json o
+  → Dual m e Json o
   → Dual.Record.Builder
     (Validator.Validator m (Json.Validators.Errors e))
-    s
+    m
     (Object Json)
     { | ser'}
     { | prs}
@@ -210,17 +200,16 @@ insertOptional label dual =
 
 infix 10 insertOptional as :=?
 
-insertConst ∷ ∀ e l o m prs prs' s ser ser'
+insertConst ∷ ∀ e l o m prs prs' ser ser'
   . Row.Cons' l o ser ser'
   ⇒ Row.Cons' l o prs prs'
   ⇒ IsSymbol l
   ⇒ Monad m
-  ⇒ Applicative s
   ⇒ SProxy l
   → o
   → Dual.Record.Builder
     (Validator.Validator m (Json.Validators.Errors (FieldMissing + e)))
-    s
+    m
     (Object Json)
     { | ser'}
     { | prs}
@@ -233,22 +222,20 @@ insertConst label a = label := (dual prs ser)
 type CoproductErrors e = (IncorrectTag + StringExpected + FieldMissing + ObjectExpected + e)
 
 variant
-  ∷ ∀ e d dl m s v
+  ∷ ∀ e d dl m v
   . Monad m
-  ⇒ Monad s
   ⇒ RowToList d dl
-  ⇒ GDualVariant (Validator.Validator m (Json.Validators.Errors (CoproductErrors + e))) s Json dl d v
+  ⇒ GDualVariant (Validator.Validator m (Json.Validators.Errors (CoproductErrors + e))) m Json dl d v
   ⇒ { | d }
-  → Dual m s (CoproductErrors + e) Json (Variant v)
+  → Dual m (CoproductErrors + e) Json (Variant v)
 variant = Validator.Dual.Generic.variant tagged
 
-sum ∷ ∀ a m e rep r s
+sum ∷ ∀ a m e rep r
   . Monad m
-  ⇒ Monad s
   ⇒ Generic a rep
-  ⇒ GDualSum (Validator.Validator m (Json.Validators.Errors (CoproductErrors + e))) s Json rep r
+  ⇒ GDualSum (Validator.Validator m (Json.Validators.Errors (CoproductErrors + e))) m Json rep r
   ⇒ { | r }
-  → Dual m s (CoproductErrors + e) Json a
+  → Dual m (CoproductErrors + e) Json a
 sum = Validator.Dual.Generic.sum tagged
 
 _incorrectTag = SProxy ∷ SProxy "incorrectTag"
@@ -256,12 +243,12 @@ _incorrectTag = SProxy ∷ SProxy "incorrectTag"
 type IncorrectTag e = (incorrectTag ∷ String | e)
 
 tagged
-  ∷ ∀ a e l m s. Monad m
-  ⇒ Monad s
+  ∷ ∀ a e l m
+  . Monad m
   ⇒ IsSymbol l
   ⇒ SProxy l
-  → Dual m s (CoproductErrors + e) Json a
-  → Dual m s (CoproductErrors + e) Json a
+  → Dual m (CoproductErrors + e) Json a
+  → Dual m (CoproductErrors + e) Json a
 tagged label (Dual.Dual (Dual.DualD prs ser))  =
   object >>> tagFields >>> tagged'
   where
@@ -279,26 +266,26 @@ tagged label (Dual.Dual (Dual.DualD prs ser))  =
       in
         dual prs' ser'
 
-on ∷ ∀ a l e m r r' s
+on
+  ∷ ∀ a l e m r r'
   . IsSymbol l
   ⇒ Monad m
-  ⇒ Monad s
   ⇒ Row.Cons l a r r'
   ⇒ SProxy l
-  → Dual m s (CoproductErrors + e) Json a
-  → Dual m s (CoproductErrors + e) Json (Variant r)
-  → Dual m s (CoproductErrors + e) Json (Variant r')
+  → Dual m (CoproductErrors + e) Json a
+  → Dual m (CoproductErrors + e) Json (Variant r)
+  → Dual m (CoproductErrors + e) Json (Variant r')
 on label d rest = Dual.Variant.on tagged label d rest
 
 infix 10 on as :>
 
-noArgs ∷ ∀ e m s. Monad m ⇒ Applicative s ⇒ Dual m s e Json NoArguments
+noArgs ∷ ∀ e m. Monad m ⇒ Dual m e Json NoArguments
 noArgs = Dual.Generic.Sum.noArgs' jsonNull
 
-unit ∷ ∀ e m s. Monad m ⇒ Applicative s ⇒ Dual m s e Json Unit
+unit ∷ ∀ e m. Monad m ⇒ Dual m e Json Unit
 unit = Dual.Generic.Sum.unit' jsonNull
 
-argonaut ∷ ∀ a e m s. Monad m ⇒ Applicative s ⇒ EncodeJson a ⇒ DecodeJson a ⇒ Dual m s (ArgonautError + e) Json a
+argonaut ∷ ∀ a e m. Monad m ⇒ EncodeJson a ⇒ DecodeJson a ⇒ Dual m (ArgonautError + e) Json a
 argonaut = dual Json.Validators.argonaut ser
   where
     ser = (pure <<< encodeJson)

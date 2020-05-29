@@ -23,7 +23,7 @@ type Errors errs = Array (Variant errs)
 
 type Validator m errs i o = Polyform.Validator m (Errors errs) i o
 
-type Dual m s errs i o = Polyform.Validator.Dual.Dual m s (Errors errs) i o
+type Dual m errs i o = Polyform.Validator.Dual.Dual m (Errors errs) i o
 
 -- | Handy shortcuts to quickly build an error or the whole failure result
 error ∷ ∀ e errs l t. Row.Cons l e t errs ⇒ IsSymbol l ⇒ SProxy l → e → Errors errs

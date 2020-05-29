@@ -26,10 +26,10 @@ fromValidator name = lmapValidator (Array.singleton <<< { name, errors: _ })
 namespaceValidator ∷ ∀ err i m r. Monad m ⇒ Validator m err i ~> Batteries.Validator m (urlEncoded ∷ Errors err | r) i
 namespaceValidator = lmapValidator (Array.singleton <<< Variant.inj _urlEncoded)
 
-type Dual m s (errs ∷ # Type) i o = Validator.Dual.Dual m s (Errors errs) i o
+type Dual m (errs ∷ # Type) i o = Validator.Dual.Dual m (Errors errs) i o
 
-fromDual ∷ ∀ errs i m s. Monad m ⇒ String → Batteries.Dual m s errs i ~> Dual m s errs i
+fromDual ∷ ∀ errs i m. Monad m ⇒ String → Batteries.Dual m errs i ~> Dual m errs i
 fromDual name = Dual.hoistParser (fromValidator name)
 
-namespaceDual ∷ ∀ errs i m s. Monad m ⇒ Dual m s errs i ~> Batteries.Dual m s (urlEncoded ∷ Errors errs) i
+namespaceDual ∷ ∀ errs i m. Monad m ⇒ Dual m errs i ~> Batteries.Dual m (urlEncoded ∷ Errors errs) i
 namespaceDual = Dual.hoistParser namespaceValidator

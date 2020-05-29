@@ -28,10 +28,9 @@ validator = Validator.liftFnV $ Argonaut.jsonParser >>> case _ of
   Left e → Batteries.invalid _decodingError e
 
 dual
-  ∷ ∀ e m s
+  ∷ ∀ e m
   . Monad m
-  ⇒ Applicative s
-  ⇒ Batteries.Dual m s (JsonDecodingError + e) String Json
+  ⇒ Batteries.Dual m (JsonDecodingError + e) String Json
 dual = Dual.dual
   validator
   (pure <<< Argonaut.stringify)

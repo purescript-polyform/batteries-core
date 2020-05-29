@@ -91,11 +91,10 @@ validator (Formatting { parse: p }) =
   Validator.liftFnMaybe (Batteries.error _decimal) p
 
 dual
-  ∷ ∀ e m s
+  ∷ ∀ e m
   . Applicative m
-  ⇒ Applicative s
   ⇒ Formatting
-  → Batteries.Dual m s (decimal ∷ String | e) String Decimal
+  → Batteries.Dual m (decimal ∷ String | e) String Decimal
 dual (fmt@(Formatting { print: p })) =
   Dual.dual (validator fmt) (p >>> pure)
 
