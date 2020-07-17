@@ -8,7 +8,7 @@ import Prim.Row (class Cons) as Row
 import Type.Prelude (class IsSymbol, SProxy)
 import Type.Row (type (+))
 
-type NotGreaterThanErr a = { value ∷ a, max ∷ a }
+type NotGreaterThanErr a = { value ∷ a, min ∷ a }
 
 greaterThan
   ∷ ∀ a err err' l m
@@ -19,9 +19,9 @@ greaterThan
   ⇒ SProxy l
   → a
   → Batteries.Validator m err' a a
-greaterThan l max = Validator.check (Batteries.error l <<< { max, value: _ }) (_ > max)
+greaterThan l min = Validator.check (Batteries.error l <<< { min, value: _ }) (_ > min)
 
-type NotSmallerThanErr a = { value ∷ a, min ∷ a }
+type NotSmallerThanErr a = { value ∷ a, max ∷ a }
 
 smallerThan ∷ ∀ a err err' l m
   . Row.Cons l (NotSmallerThanErr a) err err'
@@ -31,7 +31,7 @@ smallerThan ∷ ∀ a err err' l m
   ⇒ SProxy l
   → a
   → Batteries.Validator m err' a a
-smallerThan l min = Validator.check (Batteries.error l <<< { min, value: _ }) (_ < min)
+smallerThan l max = Validator.check (Batteries.error l <<< { max, value: _ }) (_ < max)
 
 type RangeRow a r = ( max ∷ a, min ∷ a | r )
 

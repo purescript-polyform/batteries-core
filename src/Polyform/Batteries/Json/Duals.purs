@@ -20,6 +20,7 @@ import Data.Validation.Semigroup (invalid)
 import Data.Variant (Variant)
 import Foreign.Object (Object) as Foreign
 import Foreign.Object (singleton) as Object
+import Polyform.Batteries (Dual) as Batteries
 import Polyform.Batteries.Json.Validators (ArgonautError, ArrayExpected, BooleanExpected, Errors, JNull, NullExpected, NumberExpected, ObjectExpected, StringExpected, FieldMissing)
 import Polyform.Batteries.Json.Validators (Errors, argonaut, array, arrayOf, boolean, error, field, fromNull, int, liftValidator, null, number, object, optionalField, string) as Json.Validators
 import Polyform.Dual (Dual(..), DualD(..), hoistParser) as Dual
@@ -33,7 +34,6 @@ import Polyform.Type.Row (class Cons') as Row
 import Polyform.Validator (Validator, liftFn, liftFnV) as Validator
 import Polyform.Validator.Dual as Validator.Dual
 import Polyform.Validator.Dual.Generic (sum, variant) as Validator.Dual.Generic
-import Polyform.Batteries (Dual) as Batteries
 import Prim.Row (class Cons) as Row
 import Prim.RowList (class RowToList)
 import Type.Prelude (class IsSymbol, SProxy(..), reflectSymbol)
@@ -268,9 +268,9 @@ tagged label (Dual.Dual (Dual.DualD prs ser))  =
 
 on
   ∷ ∀ a l e m r r'
-  . IsSymbol l
-  ⇒ Monad m
+  . Monad m
   ⇒ Row.Cons l a r r'
+  ⇒ IsSymbol l
   ⇒ SProxy l
   → Dual m (CoproductErrors + e) Json a
   → Dual m (CoproductErrors + e) Json (Variant r)

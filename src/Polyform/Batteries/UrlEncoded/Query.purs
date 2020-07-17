@@ -2,14 +2,18 @@ module Polyform.Batteries.UrlEncoded.Query where
 
 import Prelude
 
+import Data.FoldableWithIndex (foldrWithIndex)
 import Data.FormURLEncoded (FormURLEncoded(..))
 import Data.FormURLEncoded (decode) as FormURLEncoded
+import Data.List (List(..), intercalate) as List
+import Data.List (foldr)
 import Data.Map (Map)
 import Data.Map (fromFoldableWith, lookup, unionWith) as Map
 import Data.Maybe (Maybe)
-import Data.Newtype (class Newtype)
+import Data.Newtype (class Newtype, un)
 import Data.String (Pattern(..), Replacement(..), replaceAll)
 import Data.Unfoldable (fromMaybe)
+import Global.Unsafe (unsafeEncodeURIComponent)
 
 type Key = String
 
@@ -85,16 +89,17 @@ parse { replacePlus } query = do
 --         step key [] = Array.Builder.cons (Tuple key Nothing)
 --         step key values = foldMap (\v → Array.Builder.cons (Tuple key (Just v))) values
 -- 
---     -- | TODO: Make this safe by dropping unsupported codeunits:
---     -- |
---     -- | * https://stackoverflow.com/questions/16868415/encodeuricomponent-throws-an-exception
---     -- |
---     -- | * urlPart = urlPart.replace(/[\ud800-\udfff]/g, '');
--- 
---     unsafeEncode ∷ FormURLEncoded → String
---     unsafeEncode = String.joinWith "&" <<< map encodePart <<< FormURLEncoded.toArray
---       where
---         encodePart = case _ of
---           Tuple k Nothing -> unsafeEncodeURIComponent k
---           Tuple k (Just v) -> unsafeEncodeURIComponent k <> "=" <> unsafeEncodeURIComponent v
+-- | TODO: Make this safe by dropping unsupported codeunits:
+-- |
+-- | * https://stackoverflow.com/questions/16868415/encodeuricomponent-throws-an-exception
+-- |
+-- | * urlPart = urlPart.replace(/[\ud800-\udfff]/g, '');
+
+unsafeEncode ∷ Decoded → String
+unsafeEncode = List.intercalate "&" <<< foldrWithIndex encodePart List.Nil <<< un Decoded
+  where
+    encodePart k varr l = case varr of
+      [] -> List.Cons (unsafeEncodeURIComponent k) l
+      vs -> foldr (step k) l vs
+    step k v r = List.Cons (unsafeEncodeURIComponent k <> "=" <> unsafeEncodeURIComponent v) r
 

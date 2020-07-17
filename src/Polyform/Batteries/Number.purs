@@ -15,6 +15,9 @@ _numberExpected = SProxy ∷ SProxy "numberExpected"
 
 type NumberExpected e = (numberExpected ∷ String | e)
 
+-- | TODO: Move these two pieces `Number.Formatter`
+-- | module and use `purescript-formatters`
+-- | API there.
 validator ∷ ∀ e m. Monad m ⇒ Batteries.Validator m (NumberExpected + e) String Number
 validator = Validator.liftFnMaybe (Batteries.error _numberExpected) Number.fromString
 
