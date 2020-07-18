@@ -6,25 +6,30 @@ module Polyform.Batteries.UrlEncoded.Validators
   ( BooleanExpected
   , Field
   , IntExpected
-  , SingleValueExpected
+  , MissingValue
+  , SingleField
+  , module Query
   , _booleanExpected
   , _intExpected
-  , _singleValueExpected
+  , _missingValue
   , array
   , boolean
-  , field
+  , optional
+  , optValidator
+  , required
   , int
-  , module Query
   , number
-  , optionalField
-  , singleValue
+  , value
   )
   where
 
 import Prelude
 
+import Data.Array (head) as Array
+import Data.Either (Either(..))
 import Data.Int as Int
 import Data.Maybe (Maybe(..))
+import Data.Validation.Semigroup (V(..))
 import Polyform.Batteries (Validator, error, invalid) as Batteries
 import Polyform.Batteries.Number (NumberExpected)
 import Polyform.Batteries.Number (validator) as Batteries.Number
@@ -37,14 +42,46 @@ import Type.Row (type (+))
 
 type Field m e b = Batteries.Validator m e (Maybe Query.Value) b
 
-field ∷ ∀ a m errs. Monad m ⇒ Query.Key → Field m errs a → Validator m errs Query.Decoded a
-field name fieldValidator = fromValidator name (fieldValidator <<< Validator.liftFn (Query.lookup name))
+type SingleField m e b = Batteries.Validator m e String b
+type MultiField m e b = Batteries.Validator m e (Array String) b
 
-optionalField ∷ ∀ a e m. Monad m ⇒ Field m e a → Field m e (Maybe a)
-optionalField fv = liftFnMV $ case _ of
-  Just [] → pure (pure Nothing)
-  Nothing → pure (pure Nothing)
-  value → map Just <$> runValidator fv value
+required
+  ∷ ∀ a m errs
+  . Monad m
+  ⇒ Query.Key
+  → SingleField m (MissingValue + errs) a
+  → Validator m (MissingValue + errs) Query.Decoded a
+required name fieldValidator =
+  fromValidator
+    name
+    (fieldValidator <<< value <<< Validator.liftFn (Query.lookup name))
+
+optional
+  ∷ ∀ a m errs
+  . Monad m
+  ⇒ Query.Key
+  → SingleField m (errs) a
+  → Validator m (errs) Query.Decoded (Maybe a)
+optional name fieldValidator =
+  fromValidator name (optValidator fieldValidator <<< Validator.liftFn (Query.lookup name))
+
+_missingValue = SProxy ∷ SProxy "missingValue"
+
+type MissingValue e = (missingValue ∷ Unit | e)
+
+value ∷ ∀ e m. Applicative m ⇒ Field m (MissingValue + e) String
+value = liftFnV $ \qv → case qv >>= Array.head of
+    Just "" → Batteries.invalid _missingValue unit
+    Just v → pure v
+    Nothing → Batteries.invalid _missingValue unit
+
+-- | We could do a bit of dance with `Choice.first` etc.
+-- | but this seems simpler and a bit more efficient
+optValidator ∷ ∀ b e m. Monad m ⇒ SingleField m e b → Field m e (Maybe b)
+optValidator fieldValidator = liftFnMV \v → case v >>= Array.head of
+  Nothing → pure (V (Right Nothing))
+  Just "" → pure (V (Right Nothing))
+  Just h → runValidator (Just <$> fieldValidator) h
 
 -- | Encodes default browser behavior which sets `checkbox` value to "on"
 -- | when checked and skips it completely when it is not.
@@ -63,24 +100,15 @@ boolean = liftFnV case _ of
   Nothing → pure false
   Just v → Batteries.invalid _booleanExpected v
 
-_singleValueExpected = SProxy ∷ SProxy "singleValueExpected"
-
-type SingleValueExpected e = (singleValueExpected ∷ Maybe Query.Value | e)
-
-singleValue ∷ ∀ e m. Applicative m ⇒ Field m (SingleValueExpected + e) String
-singleValue = liftFnV $ case _ of
-  Just [v] → pure v
-  v → Batteries.invalid _singleValueExpected v
-
-number ∷ ∀ e m. Monad m ⇒ Field m (SingleValueExpected + NumberExpected + e) Number
-number = singleValue >>> Batteries.Number.validator
+number ∷ ∀ e m. Monad m ⇒ SingleField m (NumberExpected + e) Number
+number = Batteries.Number.validator
 
 _intExpected = SProxy ∷ SProxy "intExpected"
 
 type IntExpected e = (intExpected ∷ String | e)
 
-int ∷ ∀ e m. Monad m ⇒ Field m (SingleValueExpected + IntExpected + e) Int
-int = singleValue >>> Validator.liftFnMaybe (Batteries.error _intExpected) Int.fromString
+int ∷ ∀ e m. Monad m ⇒ SingleField m (IntExpected + e) Int
+int = Validator.liftFnMaybe (Batteries.error _intExpected) Int.fromString
 
 array ∷ ∀ e m. Monad m ⇒ Field m e (Array String)
 array = liftFn $ case _ of
