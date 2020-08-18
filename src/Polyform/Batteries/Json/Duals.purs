@@ -22,7 +22,7 @@ import Foreign.Object (Object) as Foreign
 import Foreign.Object (singleton) as Object
 import Polyform.Batteries (Dual) as Batteries
 import Polyform.Batteries.Json.Validators (ArgonautError, ArrayExpected, BooleanExpected, Errors, JNull, NullExpected, NumberExpected, ObjectExpected, StringExpected, FieldMissing)
-import Polyform.Batteries.Json.Validators (Errors, argonaut, array, arrayOf, boolean, error, field, fromNull, int, liftValidator, null, number, object, optionalField, string) as Json.Validators
+import Polyform.Batteries.Json.Validators (Errors, argonaut, array, arrayOf, boolean, error, field, fromNull, fromValidator, int, lmapValidatorVariant, null, number, object, optionalField, string) as Json.Validators
 import Polyform.Dual (Dual(..), DualD(..), hoistParser) as Dual
 import Polyform.Dual (dual, (~))
 import Polyform.Dual.Generic.Sum (class GDualSum)
@@ -39,14 +39,25 @@ import Prim.RowList (class RowToList)
 import Type.Prelude (class IsSymbol, SProxy(..), reflectSymbol)
 import Type.Row (type (+))
 
-type Dual m errs a b = Validator.Dual.Dual m (Errors errs) a b
+type Base m errs a b = Validator.Dual.Dual m (Errors errs) a b
+type Dual m errs b = Base m errs Json b
+type Field m errs b = Base m errs (Object Json) b
 
--- | Please check `Json.Validator.fromValidator`
+-- | Lift any Dual by enhancing error structure by adding an extra empty path.
+-- | Please check `Duals.Validators.fromValidator` for the details.
 fromDual
   ∷ ∀ errs i m o. Monad m
   ⇒ Batteries.Dual m errs i o
-  → Dual m errs i o
-fromDual = Dual.hoistParser Json.Validators.liftValidator
+  → Base m errs i o
+fromDual = Dual.hoistParser Json.Validators.fromValidator
+
+lmapDualVariant
+  ∷ ∀ errs errs' m i o
+  . Monad m
+  ⇒ (Variant errs → Variant errs')
+  → Base m errs i o
+  → Base m errs' i o
+lmapDualVariant f = Dual.hoistParser (Json.Validators.lmapValidatorVariant f)
 
 -- | We want to have Monoid for `Object` so we
 -- | can compose serializations by monoidal
@@ -60,7 +71,7 @@ type Object a = Foreign.Object (First a)
 object
   ∷ ∀ errs m
   . Monad m
-  ⇒ Dual m (objectExpected ∷ Json | errs) Json (Object Json)
+  ⇒ Dual m (objectExpected ∷ Json | errs) (Object Json)
 object = dual
   (map First <$> Json.Validators.object)
   (pure <<< Argonaut.fromObject <<< map runFirst)
@@ -74,8 +85,8 @@ field
   ∷ ∀ a e m
   . Monad m
   ⇒ String
-  → Dual m (FieldMissing + e) Json a
-  → Dual m (FieldMissing + e) (Object Json) a
+  → Dual m (FieldMissing + e) a
+  → Field m (FieldMissing + e) a
 field label d =
   dual prs ser
   where
@@ -90,8 +101,8 @@ optionalField
   ∷ ∀ a err m
   . Monad m
   ⇒ String
-  → Dual m err Json a
-  → Dual m err (Object Json) (Maybe a)
+  → Dual m err a
+  → Field m err (Maybe a)
 optionalField label d =
   dual prs ser
   where
@@ -109,7 +120,7 @@ optionalField label d =
 null
   ∷ ∀ errs m
   . Monad m
-  ⇒ Dual m (NullExpected + errs) Json JNull
+  ⇒ Dual m (NullExpected + errs) JNull
 null = dual
   Json.Validators.null
   (pure <<< Json.Validators.fromNull)
@@ -117,7 +128,7 @@ null = dual
 array
   ∷ ∀ errs m
   . Monad m
-  ⇒ Dual m (ArrayExpected + errs) Json (Array Json)
+  ⇒ Dual m (ArrayExpected + errs) (Array Json)
 array = dual
   Json.Validators.array
   (pure <<< Argonaut.fromArray)
@@ -125,15 +136,15 @@ array = dual
 arrayOf
   ∷ ∀ e o m
   . Monad m
-  ⇒ Dual m (ArrayExpected + e) Json o
-  → Dual m (ArrayExpected + e) Json (Array o)
+  ⇒ Dual m (ArrayExpected + e) o
+  → Dual m (ArrayExpected + e) (Array o)
 arrayOf (Dual.Dual (Dual.DualD prs ser)) =
   dual (Json.Validators.arrayOf prs) (map Argonaut.fromArray <<< traverse ser)
 
 int
   ∷ ∀ errs m
   . Monad m
-  ⇒ Dual m (intExpected ∷ Json | errs) Json Int
+  ⇒ Dual m (intExpected ∷ Json | errs) Int
 int = dual
   Json.Validators.int
   (pure <<< Argonaut.fromNumber <<< Int.toNumber)
@@ -141,7 +152,7 @@ int = dual
 boolean
   ∷ ∀ errs m
   . Monad m
-  ⇒ Dual m (BooleanExpected + errs) Json Boolean
+  ⇒ Dual m (BooleanExpected + errs) Boolean
 boolean = dual
   Json.Validators.boolean
   (pure <<< Argonaut.fromBoolean)
@@ -149,7 +160,7 @@ boolean = dual
 number
   ∷ ∀ errs m
   . Monad m
-  ⇒ Dual m (NumberExpected + errs) Json Number
+  ⇒ Dual m (NumberExpected + errs) Number
 number = dual
   Json.Validators.number
   (pure <<< Argonaut.fromNumber)
@@ -157,7 +168,7 @@ number = dual
 string
   ∷ ∀ errs m
   . Monad m
-  ⇒ Dual m (StringExpected + errs) Json String
+  ⇒ Dual m (StringExpected + errs) String
 string = dual
   Json.Validators.string
   (pure <<< Argonaut.fromString)
@@ -168,7 +179,7 @@ insert ∷ ∀ e l o m prs prs' ser ser'
   ⇒ IsSymbol l
   ⇒ Monad m
   ⇒ SProxy l
-  → Dual m (FieldMissing + e) Json o
+  → Dual m (FieldMissing + e) o
   → Dual.Record.Builder
     (Validator.Validator m (Json.Validators.Errors (FieldMissing + e)))
     m
@@ -187,7 +198,7 @@ insertOptional ∷ ∀ e m l o prs prs' ser ser'
   ⇒ IsSymbol l
   ⇒ Monad m
   ⇒ SProxy l
-  → Dual m e Json o
+  → Dual m e o
   → Dual.Record.Builder
     (Validator.Validator m (Json.Validators.Errors e))
     m
@@ -227,7 +238,7 @@ variant
   ⇒ RowToList d dl
   ⇒ GDualVariant (Validator.Validator m (Json.Validators.Errors (CoproductErrors + e))) m Json dl d v
   ⇒ { | d }
-  → Dual m (CoproductErrors + e) Json (Variant v)
+  → Dual m (CoproductErrors + e) (Variant v)
 variant = Validator.Dual.Generic.variant tagged
 
 sum ∷ ∀ a m e rep r
@@ -235,7 +246,7 @@ sum ∷ ∀ a m e rep r
   ⇒ Generic a rep
   ⇒ GDualSum (Validator.Validator m (Json.Validators.Errors (CoproductErrors + e))) m Json rep r
   ⇒ { | r }
-  → Dual m (CoproductErrors + e) Json a
+  → Dual m (CoproductErrors + e) a
 sum = Validator.Dual.Generic.sum tagged
 
 _incorrectTag = SProxy ∷ SProxy "incorrectTag"
@@ -247,8 +258,8 @@ tagged
   . Monad m
   ⇒ IsSymbol l
   ⇒ SProxy l
-  → Dual m (CoproductErrors + e) Json a
-  → Dual m (CoproductErrors + e) Json a
+  → Dual m (CoproductErrors + e) a
+  → Dual m (CoproductErrors + e) a
 tagged label (Dual.Dual (Dual.DualD prs ser))  =
   object >>> tagFields >>> tagged'
   where
@@ -272,20 +283,20 @@ on
   ⇒ Row.Cons l a r r'
   ⇒ IsSymbol l
   ⇒ SProxy l
-  → Dual m (CoproductErrors + e) Json a
-  → Dual m (CoproductErrors + e) Json (Variant r)
-  → Dual m (CoproductErrors + e) Json (Variant r')
+  → Dual m (CoproductErrors + e) a
+  → Dual m (CoproductErrors + e) (Variant r)
+  → Dual m (CoproductErrors + e) (Variant r')
 on label d rest = Dual.Variant.on tagged label d rest
 
 infix 10 on as :>
 
-noArgs ∷ ∀ e m. Monad m ⇒ Dual m e Json NoArguments
+noArgs ∷ ∀ e m. Monad m ⇒ Dual m e NoArguments
 noArgs = Dual.Generic.Sum.noArgs' jsonNull
 
-unit ∷ ∀ e m. Monad m ⇒ Dual m e Json Unit
+unit ∷ ∀ e m. Monad m ⇒ Dual m e Unit
 unit = Dual.Generic.Sum.unit' jsonNull
 
-argonaut ∷ ∀ a e m. Monad m ⇒ EncodeJson a ⇒ DecodeJson a ⇒ Dual m (ArgonautError + e) Json a
+argonaut ∷ ∀ a e m. Monad m ⇒ EncodeJson a ⇒ DecodeJson a ⇒ Dual m (ArgonautError + e) a
 argonaut = dual Json.Validators.argonaut ser
   where
     ser = (pure <<< encodeJson)

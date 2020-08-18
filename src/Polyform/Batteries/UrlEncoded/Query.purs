@@ -61,6 +61,19 @@ parse { replacePlus } query = do
   FormURLEncoded decoded ← FormURLEncoded.decode query'
   pure <<< Decoded <<< Map.fromFoldableWith (<>) <<< map (map fromMaybe) $ decoded
 
+-- | TODO: Make this safe by dropping unsupported codeunits:
+-- |
+-- | * https://stackoverflow.com/questions/16868415/encodeuricomponent-throws-an-exception
+-- |
+-- | * urlPart = urlPart.replace(/[\ud800-\udfff]/g, '');
+unsafeEncode ∷ Decoded → String
+unsafeEncode = List.intercalate "&" <<< foldrWithIndex encodePart List.Nil <<< un Decoded
+  where
+    encodePart k varr l = case varr of
+      [] -> List.Cons (unsafeEncodeURIComponent k) l
+      vs -> foldr (step k) l vs
+    step k v r = List.Cons (unsafeEncodeURIComponent k <> "=" <> unsafeEncodeURIComponent v) r
+
 
 -- | Parser
 -- type Error fieldErrs errs =
@@ -88,18 +101,4 @@ parse { replacePlus } query = do
 --       where
 --         step key [] = Array.Builder.cons (Tuple key Nothing)
 --         step key values = foldMap (\v → Array.Builder.cons (Tuple key (Just v))) values
--- 
--- | TODO: Make this safe by dropping unsupported codeunits:
--- |
--- | * https://stackoverflow.com/questions/16868415/encodeuricomponent-throws-an-exception
--- |
--- | * urlPart = urlPart.replace(/[\ud800-\udfff]/g, '');
-
-unsafeEncode ∷ Decoded → String
-unsafeEncode = List.intercalate "&" <<< foldrWithIndex encodePart List.Nil <<< un Decoded
-  where
-    encodePart k varr l = case varr of
-      [] -> List.Cons (unsafeEncodeURIComponent k) l
-      vs -> foldr (step k) l vs
-    step k v r = List.Cons (unsafeEncodeURIComponent k <> "=" <> unsafeEncodeURIComponent v) r
 

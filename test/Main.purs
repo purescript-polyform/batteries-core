@@ -4,13 +4,15 @@ import Prelude
 
 import Effect (Effect)
 import Test.Polyform.Batteries.Decimal (suite) as Test.Polyform.Batteries.Decimal
-import Test.Unit.Main (runTest)
-import Test.Polyform.Batteries.Json.Validators (suite) as Test.Polyform.Batteries.Json.Validators
 import Test.Polyform.Batteries.Json.Duals (suite) as Test.Polyform.Batteries.Json.Duals
+import Test.Polyform.Batteries.Json.Validators (suite) as Test.Polyform.Batteries.Json.Validators
+import Test.Polyform.UrlEncoded (suite) as Test.Polyform.Batteries.UrlEncoded
+import Test.Unit.Main (runTest)
 
 main ∷ Effect Unit
 main = runTest $ do
   Test.Polyform.Batteries.Decimal.suite
+  Test.Polyform.Batteries.UrlEncoded.suite
   Test.Polyform.Batteries.Json.Validators.suite
   Test.Polyform.Batteries.Json.Duals.suite
 

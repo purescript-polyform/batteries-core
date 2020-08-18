@@ -54,7 +54,6 @@ suite =
            , objectExpected :: Json
            , stringExpected :: Json
            )
-          Json
           _
 
         obj = object >>> r

@@ -2,7 +2,7 @@ module Test.Polyform.Batteries.Json.Duals where
 
 import Prelude hiding (unit)
 
-import Data.Argonaut (Json, fromNumber, fromObject, fromString, jsonNull)
+import Data.Argonaut (fromNumber, fromObject, fromString, jsonNull)
 import Data.Argonaut (fromBoolean, fromNumber) as Argonaut
 import Data.Argonaut (fromString) as Argounaut
 import Data.Generic.Rep (class Generic)
@@ -49,7 +49,7 @@ _i = SProxy ∷ SProxy "i"
 variant
   ∷ forall e m
   . Monad m
-  ⇒ Json.Duals.Dual m (CoproductErrors + IntExpected + e) Json (Variant (i ∷ Int, s ∷ String, u ∷ Unit))
+  ⇒ Json.Duals.Dual m (CoproductErrors + IntExpected + e) (Variant (i ∷ Int, s ∷ String, u ∷ Unit))
 variant = case_
   # on (SProxy ∷ SProxy "s") string
   # on (SProxy ∷ SProxy "u") unit
@@ -66,7 +66,6 @@ sumVariantDual
     + StringExpected
     + e
     )
-    Json
     (Variant (s ∷ String, b ∷ Boolean, i ∷ Int))
 sumVariantDual = Json.Duals.object >>> tagWithValue >>> valueDual
   where
@@ -90,8 +89,7 @@ sumVariantDual = Json.Duals.object >>> tagWithValue >>> valueDual
 
 suite :: TestSuite
 suite =
-  Test.Unit.suite "Test.Json.Validators.Duals" $ do
-
+  Test.Unit.suite "Test.Batteries.Json.Duals" $ do
     Test.Unit.suite "record handling" $ do
       let
         obj
@@ -104,7 +102,6 @@ suite =
             + StringExpected
             + e
             )
-            Json
             { foo ∷ Int, bar ∷ String, baz ∷ Number }
         obj = object >>> d
           where
@@ -144,7 +141,6 @@ suite =
               + StringExpected
               + ()
               )
-              Json
               Sum
           sumD = sum
             { "S": identity string

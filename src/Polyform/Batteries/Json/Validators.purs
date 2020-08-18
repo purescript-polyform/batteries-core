@@ -1,8 +1,10 @@
 module Polyform.Batteries.Json.Validators
   ( ArgonautError
   , ArrayExpected
+  , Base
   , BooleanExpected
   , Errors
+  , Field
   , FieldMissing
   , IntExpected
   , JNull
@@ -26,8 +28,9 @@ module Polyform.Batteries.Json.Validators
   , boolean
   , consErrorsPath
   , error
-  , liftValidator
+  , fromValidator
   , liftErrors
+  , lmapValidatorVariant
   , index
   , int
   , jnull
@@ -66,9 +69,9 @@ import Data.Variant (Variant)
 import Data.Variant (inj) as Variant
 import Foreign.Object (Object)
 import Foreign.Object (lookup) as Object
-import Polyform.Validator (Validator, liftFn, liftFnEither, liftFnMaybe) as Validator
-import Polyform.Validator (liftFnMV, liftFnMaybe, lmapValidator, runValidator)
 import Polyform.Batteries (Errors, Validator) as Batteries
+import Polyform.Validator (Validator, liftFn, liftFnEither, liftFnMaybe, lmapValidator) as Validator
+import Polyform.Validator (liftFnMV, liftFnMaybe, runValidator)
 import Prim.Row (class Cons) as Row
 import Type.Prelude (class IsSymbol)
 import Type.Row (type (+))
@@ -90,7 +93,9 @@ instance showSegment ∷ Show Segment where
 
 type Errors errs = Array { path ∷ List Segment, errors ∷ Array (Variant errs) }
 
-type Validator m errs i o = Validator.Validator m (Errors errs) i o
+type Base m errs i o = Validator.Validator m (Errors errs) i o
+type Field m errs o = Base m errs (Object Json) o
+type Validator m errs o = Base m errs Json o
 
 -- | Lifts validators which represents error as `Array (Variant errs)`
 -- | into json validator by wrapping failures in empty path information.
@@ -101,10 +106,10 @@ type Validator m errs i o = Validator.Validator m (Errors errs) i o
 -- |
 -- | ```
 -- | nonBlankString ∷ ∀ e m. Monad m ⇒ Validator m (stringExpected ∷ Json, nonBlankExpected ∷ Unit | e) Json String
--- | nonBlankString = fromValidator String.nonBlank <<< string
+-- | nonBlankString = liftValidator String.nonBlank <<< string
 -- | ```
-liftValidator ∷ ∀ errs m i. Monad m ⇒ Batteries.Validator m errs i ~> Validator m errs i
-liftValidator = lmapValidator liftErrors
+fromValidator ∷ ∀ errs m i. Monad m ⇒ Batteries.Validator m errs i ~> Base m errs i
+fromValidator = Validator.lmapValidator liftErrors
 
 error ∷ ∀ errs e l r.  Row.Cons l e r errs ⇒ IsSymbol l ⇒ SProxy l → e → Errors errs
 error label
@@ -115,6 +120,12 @@ error label
 liftErrors ∷ ∀ errs. Batteries.Errors errs → Errors errs
 liftErrors = Array.singleton <<< { path: Nil, errors: _ }
 
+lmapValidatorVariant ∷ ∀ err err' i m o. Monad m ⇒ (Variant err → Variant err') → Base m err i o → Base m err' i o
+lmapValidatorVariant f = Validator.lmapValidator (mapErrors f)
+
+mapErrors ∷ ∀ err err'. (Variant err → Variant err') → Errors err → Errors err'
+mapErrors f = map (\{ errors, path } → { path, errors: map f errors })
+
 consErrorsPath ∷ ∀ e. Segment → Errors e → Errors e
 consErrorsPath segment = map step
   where
@@ -124,16 +135,16 @@ _objectExpected = SProxy ∷ SProxy "objectExpected"
 
 type ObjectExpected e = (objectExpected ∷ Json | e)
 
-object ∷ ∀ e m. Monad m ⇒ Validator m (ObjectExpected + e) Json (Object Json)
+object ∷ ∀ e m. Monad m ⇒ Validator m (ObjectExpected + e) (Object Json)
 object = Validator.liftFnMaybe (error _objectExpected) Argonaut.toObject
 
 field_
   ∷ ∀ a errs m
   . Monad m
   ⇒ String
-  → Validator m errs (Maybe Json) a
-  → Validator m errs (Object Json) a
-field_ name fv = Validator.liftFn (Object.lookup name) >>> lmapValidator (consErrorsPath (Key name)) fv
+  → Base m errs (Maybe Json) a
+  → Field m errs a
+field_ name fv = Validator.liftFn (Object.lookup name) >>> Validator.lmapValidator (consErrorsPath (Key name)) fv
 
 _fieldMissing = SProxy ∷ SProxy "fieldMissing"
 
@@ -155,16 +166,16 @@ field
   ∷ ∀ a errs m
   . Monad m
   ⇒ String
-  → Validator m (FieldMissing + errs) Json a
-  → Validator m (FieldMissing + errs) (Object Json) a
+  → Validator m (FieldMissing + errs) a
+  → Field m (FieldMissing + errs) a
 field name fv = field_ name (liftFnMaybe (const $ error _fieldMissing unit) identity >>> fv)
 
 optionalField
   ∷ ∀ a errs m
   . Monad m
   ⇒ String
-  → Validator m errs Json a
-  → Validator m errs (Object Json) (Maybe a)
+  → Validator m errs a
+  → Field m errs (Maybe a)
 optionalField name fv = field_ name v
   where
     v = lcmap (note unit) (pure Nothing ||| Just <$> fv)
@@ -173,14 +184,14 @@ _arrayExpected = SProxy ∷ SProxy "arrayExpected"
 
 type ArrayExpected e = (arrayExpected ∷ Json | e)
 
-array ∷ ∀ e m. Monad m ⇒ Validator m (ArrayExpected + e) Json (Array Json)
+array ∷ ∀ e m. Monad m ⇒ Validator m (ArrayExpected + e) (Array Json)
 array = Validator.liftFnMaybe (error _arrayExpected) Argonaut.toArray
 
 arrayOf
   ∷ ∀ m e a
   . Monad m
-  ⇒ Validator m (ArrayExpected + e) Json a
-  → Validator m (ArrayExpected + e) Json (Array a)
+  ⇒ Validator m (ArrayExpected + e) a
+  → Validator m (ArrayExpected + e) (Array a)
 arrayOf v = array >>> liftFnMV av
   where
     ep idx = consErrorsPath (Index idx)
@@ -188,7 +199,7 @@ arrayOf v = array >>> liftFnMV av
     -- | Run every validator by prefixing its error path with index.
     -- | Validator results in `m (V e a)` so we need traverse here.
     f ∷ Array Json → m (Array (V (Errors (ArrayExpected + e )) a ))
-    f = traverseWithIndex \idx → runValidator (lmapValidator (ep idx) v)
+    f = traverseWithIndex \idx → runValidator (Validator.lmapValidator (ep idx) v)
 
     av ∷ Array Json → m (V (Errors (ArrayExpected + e)) (Array a))
     av = f >>> map sequence
@@ -210,42 +221,42 @@ _nullExpected = SProxy ∷ SProxy "nullExpected"
 
 type NullExpected e = (nullExpected ∷ Json | e)
 
-null ∷ ∀ e m. Monad m ⇒ Validator m (NullExpected + e) Json JNull
+null ∷ ∀ e m. Monad m ⇒ Validator m (NullExpected + e) JNull
 null = Validator.liftFnMaybe (error _nullExpected) toNull
 
 nullable
   ∷ ∀ a errs m
   . Monad m
-  ⇒ Validator m (NullExpected + errs) Json a
-  → Validator m (NullExpected + errs) Json (Maybe a)
+  ⇒ Validator m (NullExpected + errs) a
+  → Validator m (NullExpected + errs) (Maybe a)
 nullable fv = (null *> pure Nothing) <|> (Just <$> fv)
 
 _intExpected = SProxy ∷ SProxy "intExpected"
 
 type IntExpected e = (intExpected ∷ Json | e)
 
-int ∷ ∀ e m. Monad m ⇒ Validator m (IntExpected + e) Json Int
+int ∷ ∀ e m. Monad m ⇒ Validator m (IntExpected + e) Int
 int = Validator.liftFnMaybe (error _intExpected) (Argonaut.toNumber >=> Int.fromNumber)
 
 _booleanExpected = SProxy ∷ SProxy "booleanExpected"
 
 type BooleanExpected e = (booleanExpected ∷ Json | e)
 
-boolean ∷ ∀ e m. Monad m ⇒ Validator m (BooleanExpected + e) Json Boolean
+boolean ∷ ∀ e m. Monad m ⇒ Validator m (BooleanExpected + e) Boolean
 boolean = Validator.liftFnMaybe (error _booleanExpected) Argonaut.toBoolean
 
 _stringExpected = SProxy ∷ SProxy "stringExpected"
 
 type StringExpected e = (stringExpected ∷ Json | e)
 
-string ∷ ∀ e m. Monad m ⇒ Validator m (StringExpected + e) Json String
+string ∷ ∀ e m. Monad m ⇒ Validator m (StringExpected + e) String
 string = Validator.liftFnMaybe (error _stringExpected) Argonaut.toString
 
 _numberExpected = SProxy ∷ SProxy "numberExpected"
 
 type NumberExpected e = (numberExpected ∷ Json | e)
 
-number ∷ ∀ e m. Monad m ⇒ Validator m (NumberExpected + e) Json Number
+number ∷ ∀ e m. Monad m ⇒ Validator m (NumberExpected + e) Number
 number = Validator.liftFnMaybe (error _numberExpected) Argonaut.toNumber
 
 -- | Because argonaut is not providing this type for us any more we define
@@ -272,5 +283,5 @@ _argonautError = SProxy ∷ SProxy "argonautError"
 
 type ArgonautError e = (argonautError ∷ String | e)
 
-argonaut ∷ ∀ a e m. Monad m ⇒ DecodeJson a ⇒ Validator m (ArgonautError + e) Json a
+argonaut ∷ ∀ a e m. Monad m ⇒ DecodeJson a ⇒ Validator m (ArgonautError + e) a
 argonaut = Validator.liftFnEither (lmap (error _argonautError) <<< decodeJson)
