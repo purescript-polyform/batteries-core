@@ -5,5 +5,5 @@ module Polyform.Batteries.Json
   where
 
 import Polyform.Batteries.Json.Duals (fromDual, lmapDualVariant, Dual) as Duals
-import Polyform.Batteries.Json.Validators (error, fromValidator, lmapValidatorVariant, ArrayExpected, BooleanExpected, Errors, FieldMissing, IntExpected, NullExpected, NumberExpected, ObjectExpected, StringExpected, Validator) as Validators
+import Polyform.Batteries.Json.Validators (error, fromValidator, lmapValidatorVariant, printPath, ArrayExpected, BooleanExpected, Errors, FieldMissing, IntExpected, NullExpected, NumberExpected, ObjectExpected, StringExpected, Validator) as Validators
 

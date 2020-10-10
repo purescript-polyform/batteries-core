@@ -8,6 +8,7 @@ import Data.Argonaut.Decode.Class (class DecodeJson)
 import Data.Argonaut.Encode.Class (class EncodeJson, encodeJson)
 import Data.Either (note)
 import Data.Generic.Rep (class Generic, NoArguments)
+import Data.Identity (Identity(..))
 import Data.Int (toNumber) as Int
 import Data.Maybe (Maybe)
 import Data.Newtype (un)
@@ -41,6 +42,7 @@ import Type.Row (type (+))
 
 type Base m errs a b = Validator.Dual.Dual m (Errors errs) a b
 type Dual m errs b = Base m errs Json b
+type Pure errs b = Base Identity errs Json b
 type Field m errs b = Base m errs (Object Json) b
 
 -- | Lift any Dual by enhancing error structure by adding an extra empty path.

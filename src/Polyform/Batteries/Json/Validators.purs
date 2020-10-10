@@ -3,6 +3,7 @@ module Polyform.Batteries.Json.Validators
   , ArrayExpected
   , Base
   , BooleanExpected
+  , ErrorsBase
   , Errors
   , Field
   , FieldMissing
@@ -11,6 +12,7 @@ module Polyform.Batteries.Json.Validators
   , NullExpected
   , NumberExpected
   , ObjectExpected
+  , Path
   , Segment(..)
   , StringExpected
   , Validator
@@ -40,6 +42,7 @@ module Polyform.Batteries.Json.Validators
   , number
   , object
   , optionalField
+  , printPath
   , string
   , toNull
   )
@@ -49,9 +52,9 @@ import Prelude
 
 import Control.Alt ((<|>))
 import Data.Argonaut (Json)
-import Data.Argonaut (isNull, jsonNull, toArray, toBoolean, toNumber, toObject, toString) as Argonaut
+import Data.Argonaut (JsonDecodeError, isNull, jsonNull, toArray, toBoolean, toNumber, toObject, toString) as Argonaut
 import Data.Argonaut.Decode.Class (class DecodeJson, decodeJson)
-import Data.Array (index, singleton) as Array
+import Data.Array (fromFoldable, index, singleton) as Array
 import Data.Bifunctor (lmap)
 import Data.Either (note)
 import Data.Generic.Rep (class Generic)
@@ -61,6 +64,7 @@ import Data.List (List(..), (:))
 import Data.Maybe (Maybe(..))
 import Data.Profunctor (lcmap)
 import Data.Profunctor.Choice ((|||))
+import Data.String (joinWith) as String
 import Data.Symbol (SProxy(..))
 import Data.Traversable (sequence)
 import Data.TraversableWithIndex (traverseWithIndex)
@@ -91,7 +95,18 @@ derive instance genericSegment ∷ Generic Segment _
 instance showSegment ∷ Show Segment where
   show s = genericShow s
 
-type Errors errs = Array { path ∷ List Segment, errors ∷ Array (Variant errs) }
+type Path = List Segment
+
+printPath ∷ Path → String
+printPath = String.joinWith "." <<< map printSegment <<< Array.fromFoldable
+  where
+    printSegment (Key k) = k
+    printSegment (Index i) = show i
+
+-- | We use `ErrorsBase` when doing flattening of errors
+-- | representation in the Batteries.Messages.
+type ErrorsBase errs = Array { path ∷ Path, errors ∷ Array errs }
+type Errors errs = ErrorsBase (Variant errs)
 
 type Base m errs i o = Validator.Validator m (Errors errs) i o
 type Field m errs o = Base m errs (Object Json) o
@@ -281,7 +296,7 @@ fromNull = unsafeCoerce
 
 _argonautError = SProxy ∷ SProxy "argonautError"
 
-type ArgonautError e = (argonautError ∷ String | e)
+type ArgonautError e = (argonautError ∷ Argonaut.JsonDecodeError | e)
 
 argonaut ∷ ∀ a e m. Monad m ⇒ DecodeJson a ⇒ Validator m (ArgonautError + e) a
 argonaut = Validator.liftFnEither (lmap (error _argonautError) <<< decodeJson)
