@@ -8,7 +8,7 @@ import Data.Argonaut.Decode.Class (class DecodeJson)
 import Data.Argonaut.Encode.Class (class EncodeJson, encodeJson)
 import Data.Either (note)
 import Data.Generic.Rep (class Generic, NoArguments)
-import Data.Identity (Identity(..))
+import Data.Identity (Identity)
 import Data.Int (toNumber) as Int
 import Data.Maybe (Maybe)
 import Data.Newtype (un)
