@@ -1,9 +1,9 @@
+-- | You can use `Batteries.Integer.dual` or `Batteries.Number.dual` or any
+-- | other `String` based dual as value dual here.
 module Polyform.Batteries.UrlEncoded.Duals
   ( array
   , boolean
   , Field
-  , int
-  , number
   , optional
   , required
   , value
@@ -16,12 +16,10 @@ import Data.Array (singleton) as Array
 import Data.Map (singleton) as Map
 import Data.Maybe (Maybe(..))
 import Polyform.Batteries (Dual) as Batteries
-import Polyform.Batteries.Number (NumberExpected)
-import Polyform.Batteries.Number (dual) as Batteries.Number
 import Polyform.Batteries.UrlEncoded.Query (Decoded(..), Key, Value) as Query
 import Polyform.Batteries.UrlEncoded.Types (Dual)
-import Polyform.Batteries.UrlEncoded.Validators (BooleanExpected, IntExpected, MissingValue)
-import Polyform.Batteries.UrlEncoded.Validators (array, boolean, int, optional, required, value) as Validators
+import Polyform.Batteries.UrlEncoded.Validators (BooleanExpected, MissingValue)
+import Polyform.Batteries.UrlEncoded.Validators (array, boolean, optional, required, value) as Validators
 import Polyform.Dual (dual)
 import Polyform.Dual (parser, serializer) as Dual
 import Type.Row (type (+))
@@ -60,14 +58,6 @@ required name d = dual validator serializer
 
 value ∷ ∀ e m. Monad m ⇒ Field m (MissingValue + e) String
 value = dual Validators.value (pure <<< Just <<< Array.singleton)
-
-number ∷ ∀ e m. Monad m ⇒ SingleField m (NumberExpected + e) Number
-number = Batteries.Number.dual Nothing
-
-int ∷ ∀ e m. Monad m ⇒ SingleField m (IntExpected + e) Int
-int = dual
-  Validators.int
-  (pure <<< show)
 
 boolean ∷ ∀ e m. Monad m ⇒ Field m (BooleanExpected + e) Boolean
 boolean = dual

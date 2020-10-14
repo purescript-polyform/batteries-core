@@ -2,23 +2,21 @@
 -- | In general it follows "browsers standard" for encoding
 -- | so it should be useful in the context of HTML form validation.
 -- |
+-- | You can use `Batteries.Integer.validator` or `Batteries.Number.validator`
+-- | directly as field value validator.
 module Polyform.Batteries.UrlEncoded.Validators
   ( BooleanExpected
   , Field
-  , IntExpected
   , MissingValue
   , SingleField
   , module Query
   , _booleanExpected
-  , _intExpected
   , _missingValue
   , array
   , boolean
   , optional
   , optValidator
   , required
-  , int
-  , number
   , value
   )
   where
@@ -27,16 +25,13 @@ import Prelude
 
 import Data.Array (head) as Array
 import Data.Either (Either(..))
-import Data.Int as Int
 import Data.Maybe (Maybe(..))
 import Data.Validation.Semigroup (V(..))
-import Polyform.Batteries (Validator, error, invalid) as Batteries
-import Polyform.Batteries.Number (NumberExpected)
-import Polyform.Batteries.Number (validator) as Batteries.Number
+import Polyform.Batteries (Validator, invalid) as Batteries
 import Polyform.Batteries.UrlEncoded.Query (Decoded(..), Key, Value, lookup) as Query
 import Polyform.Batteries.UrlEncoded.Types (Validator, fromValidator)
 import Polyform.Validator (liftFn, liftFnMV, liftFnV, runValidator)
-import Polyform.Validator (liftFn, liftFnMaybe) as Validator
+import Polyform.Validator (liftFn) as Validator
 import Type.Prelude (SProxy(..))
 import Type.Row (type (+))
 
@@ -99,16 +94,6 @@ boolean = liftFnV case _ of
   Just ["off"] → pure false
   Nothing → pure false
   Just v → Batteries.invalid _booleanExpected v
-
-number ∷ ∀ e m. Monad m ⇒ SingleField m (NumberExpected + e) Number
-number = Batteries.Number.validator
-
-_intExpected = SProxy ∷ SProxy "intExpected"
-
-type IntExpected e = (intExpected ∷ String | e)
-
-int ∷ ∀ e m. Monad m ⇒ SingleField m (IntExpected + e) Int
-int = Validator.liftFnMaybe (Batteries.error _intExpected) Int.fromString
 
 array ∷ ∀ e m. Monad m ⇒ Field m e (Array String)
 array = liftFn $ case _ of
