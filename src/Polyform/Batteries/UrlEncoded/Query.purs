@@ -1,7 +1,6 @@
 module Polyform.Batteries.UrlEncoded.Query where
 
 import Prelude
-
 import Data.FoldableWithIndex (foldrWithIndex)
 import Data.FormURLEncoded (FormURLEncoded(..))
 import Data.FormURLEncoded (decode) as FormURLEncoded
@@ -15,15 +14,20 @@ import Data.String (Pattern(..), Replacement(..), replaceAll)
 import Data.Unfoldable (fromMaybe)
 import Global.Unsafe (unsafeEncodeURIComponent)
 
-type Key = String
+type Key
+  = String
 
-type Value = Array String
+type Value
+  = Array String
 
 -- | We need a map representation of query with
 -- | appending semigroup so we can use it when
 -- | composing serializers.
-newtype Decoded = Decoded (Map Key Value)
+newtype Decoded
+  = Decoded (Map Key Value)
+
 derive instance newtypeDecoded ∷ Newtype Decoded _
+
 derive newtype instance eqDecoded ∷ Eq Decoded
 
 instance semigroupDecoded ∷ Semigroup Decoded where
@@ -34,7 +38,6 @@ instance monoidDecoded ∷ Monoid Decoded where
 
 lookup ∷ String → Decoded → Maybe (Array String)
 lookup name (Decoded q) = Map.lookup name q
-
 
 -- | Browsers serialize space as `+` character
 -- | which is incorrect according to the RFC 3986
@@ -47,7 +50,8 @@ lookup name (Decoded q) = Map.lookup name q
 -- | on the server side we have to convert it to `%2b` before
 -- | decoding phase (as it is done in all investigated
 -- | libraries - please check first post in the above thread).
-type Options = { replacePlus ∷ Boolean }
+type Options
+  = { replacePlus ∷ Boolean }
 
 defaultOptions ∷ Options
 defaultOptions = { replacePlus: true }
@@ -55,9 +59,11 @@ defaultOptions = { replacePlus: true }
 parse ∷ Options → String → Maybe Decoded
 parse { replacePlus } query = do
   let
-    query' = if replacePlus
-      then replaceAll (Pattern "+") (Replacement " ") query
-      else query
+    query' =
+      if replacePlus then
+        replaceAll (Pattern "+") (Replacement " ") query
+      else
+        query
   FormURLEncoded decoded ← FormURLEncoded.decode query'
   pure <<< Decoded <<< Map.fromFoldableWith (<>) <<< map (map fromMaybe) $ decoded
 
@@ -69,11 +75,11 @@ parse { replacePlus } query = do
 unsafeEncode ∷ Decoded → String
 unsafeEncode = List.intercalate "&" <<< foldrWithIndex encodePart List.Nil <<< un Decoded
   where
-    encodePart k varr l = case varr of
-      [] -> List.Cons (unsafeEncodeURIComponent k) l
-      vs -> foldr (step k) l vs
-    step k v r = List.Cons (unsafeEncodeURIComponent k <> "=" <> unsafeEncodeURIComponent v) r
+  encodePart k varr l = case varr of
+    [] -> List.Cons (unsafeEncodeURIComponent k) l
+    vs -> foldr (step k) l vs
 
+  step k v r = List.Cons (unsafeEncodeURIComponent k <> "=" <> unsafeEncodeURIComponent v) r
 
 -- | Parser
 -- type Error fieldErrs errs =
@@ -81,7 +87,6 @@ unsafeEncode = List.intercalate "&" <<< foldrWithIndex encodePart List.Nil <<< u
 --   , fieldError ∷ FieldError fieldErrs
 --   | errs
 --   )
-
 -- _queryParseError = SProxy ∷ SProxy "queryParseError"
 -- 
 -- query ∷ ∀ m e errs. Monad m ⇒ Query.Options → Batteries.Validator m (Error e errs) String Query.Decoded
@@ -101,4 +106,3 @@ unsafeEncode = List.intercalate "&" <<< foldrWithIndex encodePart List.Nil <<< u
 --       where
 --         step key [] = Array.Builder.cons (Tuple key Nothing)
 --         step key values = foldMap (\v → Array.Builder.cons (Tuple key (Just v))) values
-

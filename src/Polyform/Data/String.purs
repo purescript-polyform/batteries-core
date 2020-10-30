@@ -1,3 +1,3 @@
 module Polyform.Data.String where
 
-foreign import reverseCodeUnits ∷  String → String
+foreign import reverseCodeUnits ∷ String → String

@@ -1,7 +1,6 @@
 module Polyform.Batteries.Decimal where
 
 import Prelude
-
 import Data.Array (catMaybes, uncons) as Array
 import Data.Array.NonEmpty (toArray) as NonEmptyArray
 import Data.Decimal (Decimal)
@@ -18,61 +17,64 @@ import Polyform.Validator (liftFnMaybe) as Validator
 import Polyform.Batteries (error, Validator, Dual) as Batteries
 import Type.Prelude (SProxy(..))
 
-newtype Formatting = Formatting
+newtype Formatting
+  = Formatting
   { parse ∷ String → Maybe Decimal
   , print ∷ Decimal → String
   }
 
 formatting ∷ { decimalSeparator ∷ Maybe String, separators ∷ Array String } → Formatting
-formatting config = Formatting
-  { parse: parse' config
-  , print: print' config
-  }
+formatting config =
+  Formatting
+    { parse: parse' config
+    , print: print' config
+    }
   where
-    parse' ∷ { decimalSeparator ∷ Maybe String, separators ∷ Array String } → String → Maybe Decimal
-    parse' { decimalSeparator, separators } =
-      let
-        dropSeparators = case map Regex.escape separators of
-          [] → identity
-          separators' →
-            let
-              regex = unsafeRegex ("(" <> String.joinWith "|" separators' <> ")") Regex.Flags.global
-            in
-              Regex.replace regex ""
-        replaceDecimalSeparator = fromMaybe identity do
+  parse' ∷ { decimalSeparator ∷ Maybe String, separators ∷ Array String } → String → Maybe Decimal
+  parse' { decimalSeparator, separators } =
+    let
+      dropSeparators = case map Regex.escape separators of
+        [] → identity
+        separators' →
+          let
+            regex = unsafeRegex ("(" <> String.joinWith "|" separators' <> ")") Regex.Flags.global
+          in
+            Regex.replace regex ""
+
+      replaceDecimalSeparator =
+        fromMaybe identity do
           s ← decimalSeparator
           let
             regex = unsafeRegex (Regex.escape s) mempty
           pure $ Regex.replace regex "."
-      in
-        Decimal.fromString <<< replaceDecimalSeparator <<< dropSeparators
+    in
+      Decimal.fromString <<< replaceDecimalSeparator <<< dropSeparators
 
-    print' ∷ { decimalSeparator ∷ Maybe String, separators ∷ Array String } → Decimal → String
-    print' { decimalSeparator, separators } =
-      let
-        decimalSeparator' = fromMaybe "." decimalSeparator
+  print' ∷ { decimalSeparator ∷ Maybe String, separators ∷ Array String } → Decimal → String
+  print' { decimalSeparator, separators } =
+    let
+      decimalSeparator' = fromMaybe "." decimalSeparator
 
-        format s = case Array.uncons separators, String.split (String.Pattern ".") s of
-          Just { head: sep }, [ integerPart, fractionalPart ] →
-            insertSep integerPart sep <> decimalSeparator' <> fractionalPart
-          Nothing, [ integerPart, fractionalPart ] → integerPart <> decimalSeparator' <> fractionalPart
-          Just { head: sep }, _  → insertSep sep s
-          _, _ → s
+      format s = case Array.uncons separators, String.split (String.Pattern ".") s of
+        Just { head: sep }, [ integerPart, fractionalPart ] → insertSep integerPart sep <> decimalSeparator' <> fractionalPart
+        Nothing, [ integerPart, fractionalPart ] → integerPart <> decimalSeparator' <> fractionalPart
+        Just { head: sep }, _ → insertSep sep s
+        _, _ → s
 
-        triplets = Regex.match (unsafeRegex "([0-9]{1,3})" (Regex.Flags.global))
+      triplets = Regex.match (unsafeRegex "([0-9]{1,3})" (Regex.Flags.global))
 
-        -- | Spiting reversed digit string into triplets
-        -- | join with separator and reverse it back.
-        insertSep ∷ String → String → String
-        insertSep s sep
-          = String.reverseCodeUnits
+      -- | Spiting reversed digit string into triplets
+      -- | join with separator and reverse it back.
+      insertSep ∷ String → String → String
+      insertSep s sep =
+        String.reverseCodeUnits
           <<< String.joinWith sep
           <<< maybe [] (Array.catMaybes <<< NonEmptyArray.toArray)
           <<< triplets
           <<< String.reverseCodeUnits
           $ s
-      in
-        format <<< Decimal.toString
+    in
+      format <<< Decimal.toString
 
 _decimal = SProxy ∷ SProxy "decimal"
 
@@ -82,22 +84,19 @@ parse (Formatting fmt) = fmt.parse
 print ∷ Formatting → Decimal → String
 print (Formatting fmt) = fmt.print
 
-validator
-  ∷ ∀ e m
-  . Applicative m
-  ⇒ Formatting
-  → Batteries.Validator m (decimal ∷ String | e) String Decimal
-validator (Formatting { parse: p }) =
-  Validator.liftFnMaybe (Batteries.error _decimal) p
+validator ∷
+  ∀ e m.
+  Applicative m ⇒
+  Formatting →
+  Batteries.Validator m ( decimal ∷ String | e ) String Decimal
+validator (Formatting { parse: p }) = Validator.liftFnMaybe (Batteries.error _decimal) p
 
-dual
-  ∷ ∀ e m
-  . Applicative m
-  ⇒ Formatting
-  → Batteries.Dual m (decimal ∷ String | e) String Decimal
-dual (fmt@(Formatting { print: p })) =
-  Dual.dual (validator fmt) (p >>> pure)
-
+dual ∷
+  ∀ e m.
+  Applicative m ⇒
+  Formatting →
+  Batteries.Dual m ( decimal ∷ String | e ) String Decimal
+dual (fmt@(Formatting { print: p })) = Dual.dual (validator fmt) (p >>> pure)
 
 -- | Usually you want to push formatting context into the validator
 -- | monad to simplify form creation and performance benefits.

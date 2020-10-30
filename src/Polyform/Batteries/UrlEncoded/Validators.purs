@@ -18,11 +18,9 @@ module Polyform.Batteries.UrlEncoded.Validators
   , optValidator
   , required
   , value
-  )
-  where
+  ) where
 
 import Prelude
-
 import Data.Array (head) as Array
 import Data.Either (Either(..))
 import Data.Maybe (Maybe(..))
@@ -35,68 +33,77 @@ import Polyform.Validator (liftFn) as Validator
 import Type.Prelude (SProxy(..))
 import Type.Row (type (+))
 
-type Field m e b = Batteries.Validator m e (Maybe Query.Value) b
+type Field m e b
+  = Batteries.Validator m e (Maybe Query.Value) b
 
-type SingleField m e b = Batteries.Validator m e String b
-type MultiField m e b = Batteries.Validator m e (Array String) b
+type SingleField m e b
+  = Batteries.Validator m e String b
 
-required
-  ∷ ∀ a m errs
-  . Monad m
-  ⇒ Query.Key
-  → SingleField m (MissingValue + errs) a
-  → Validator m (MissingValue + errs) Query.Decoded a
+type MultiField m e b
+  = Batteries.Validator m e (Array String) b
+
+required ∷
+  ∀ a m errs.
+  Monad m ⇒
+  Query.Key →
+  SingleField m (MissingValue + errs) a →
+  Validator m (MissingValue + errs) Query.Decoded a
 required name fieldValidator =
   fromValidator
     name
     (fieldValidator <<< value <<< Validator.liftFn (Query.lookup name))
 
-optional
-  ∷ ∀ a m errs
-  . Monad m
-  ⇒ Query.Key
-  → SingleField m (errs) a
-  → Validator m (errs) Query.Decoded (Maybe a)
-optional name fieldValidator =
-  fromValidator name (optValidator fieldValidator <<< Validator.liftFn (Query.lookup name))
+optional ∷
+  ∀ a m errs.
+  Monad m ⇒
+  Query.Key →
+  SingleField m (errs) a →
+  Validator m (errs) Query.Decoded (Maybe a)
+optional name fieldValidator = fromValidator name (optValidator fieldValidator <<< Validator.liftFn (Query.lookup name))
 
 _missingValue = SProxy ∷ SProxy "missingValue"
 
-type MissingValue e = (missingValue ∷ Unit | e)
+type MissingValue e
+  = ( missingValue ∷ Unit | e )
 
 value ∷ ∀ e m. Applicative m ⇒ Field m (MissingValue + e) String
-value = liftFnV $ \qv → case qv >>= Array.head of
-    Just "" → Batteries.invalid _missingValue unit
-    Just v → pure v
-    Nothing → Batteries.invalid _missingValue unit
+value =
+  liftFnV
+    $ \qv → case qv >>= Array.head of
+        Just "" → Batteries.invalid _missingValue unit
+        Just v → pure v
+        Nothing → Batteries.invalid _missingValue unit
 
 -- | We could do a bit of dance with `Choice.first` etc.
 -- | but this seems simpler and a bit more efficient
 optValidator ∷ ∀ b e m. Monad m ⇒ SingleField m e b → Field m e (Maybe b)
-optValidator fieldValidator = liftFnMV \v → case v >>= Array.head of
-  Nothing → pure (V (Right Nothing))
-  Just "" → pure (V (Right Nothing))
-  Just h → runValidator (Just <$> fieldValidator) h
+optValidator fieldValidator =
+  liftFnMV \v → case v >>= Array.head of
+    Nothing → pure (V (Right Nothing))
+    Just "" → pure (V (Right Nothing))
+    Just h → runValidator (Just <$> fieldValidator) h
 
 -- | Encodes default browser behavior which sets `checkbox` value to "on"
 -- | when checked and skips it completely when it is not.
 -- | We consider also "off" value because we want to be more consistent when
 -- | building API comunication layer - if you have any objections please fill
 -- | an issue with description.
-
 _booleanExpected = SProxy ∷ SProxy "booleanExpected"
 
-type BooleanExpected e = (booleanExpected ∷ Query.Value | e)
+type BooleanExpected e
+  = ( booleanExpected ∷ Query.Value | e )
 
-boolean ∷ ∀ e m. Applicative m ⇒ Field m (booleanExpected ∷ Query.Value | e) Boolean
-boolean = liftFnV case _ of
-  Just ["on"] → pure true
-  Just ["off"] → pure false
-  Nothing → pure false
-  Just v → Batteries.invalid _booleanExpected v
+boolean ∷ ∀ e m. Applicative m ⇒ Field m ( booleanExpected ∷ Query.Value | e ) Boolean
+boolean =
+  liftFnV case _ of
+    Just [ "on" ] → pure true
+    Just [ "off" ] → pure false
+    Nothing → pure false
+    Just v → Batteries.invalid _booleanExpected v
 
 array ∷ ∀ e m. Monad m ⇒ Field m e (Array String)
-array = liftFn $ case _ of
-  Just s → s
-  Nothing → []
-
+array =
+  liftFn
+    $ case _ of
+        Just s → s
+        Nothing → []

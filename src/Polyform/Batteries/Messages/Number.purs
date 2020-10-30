@@ -8,24 +8,25 @@ import Prim.Row (class Nub, class Union) as Row
 import Record.Builder (Builder, merge) as Record.Builder
 import Type.Row (type (+))
 
-type Messages msgs =
-  ( Number.NotGreaterThan + Number.NotSmallerThan
-  + Number.NotInRange + Number.NotEqualTo
-  + msgs
-  )
+type Messages msgs
+  = ( Number.NotGreaterThan + Number.NotSmallerThan
+        + Number.NotInRange
+        + Number.NotEqualTo
+        + msgs
+    )
 
-type Printers =
-  ( numberNotGreaterThan ∷ NotGreaterThanErr Number → String
-  , numberNotSmallerThan ∷ NotSmallerThanErr Number → String
-  , numberNotInRange ∷ NotInRangeErr Number → String
-  , numberNotEqualTo ∷ NotEqualToErr Number → String
-  )
+type Printers
+  = ( numberNotGreaterThan ∷ NotGreaterThanErr Number → String
+    , numberNotSmallerThan ∷ NotSmallerThanErr Number → String
+    , numberNotInRange ∷ NotInRangeErr Number → String
+    , numberNotEqualTo ∷ NotEqualToErr Number → String
+    )
 
-number
-  ∷ ∀ r r' r''
-  . Row.Union r Printers r'
-  ⇒ Row.Nub r' r''
-  ⇒ Record.Builder.Builder { | r } { | r'' }
+number ∷
+  ∀ r r' r''.
+  Row.Union r Printers r' ⇒
+  Row.Nub r' r'' ⇒
+  Record.Builder.Builder { | r } { | r'' }
 number =
   let
     printers ∷ { | Printers }
@@ -37,4 +38,3 @@ number =
       }
   in
     Record.Builder.merge printers
-
