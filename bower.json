@@ -14,7 +14,6 @@
         "output"
     ],
     "dependencies": {
-        "purescript-affjax": "^v10.0.0",
         "purescript-argonaut": "^v6.0.0",
         "purescript-debug": "^v4.0.0",
         "purescript-numbers": "^v7.0.0",
