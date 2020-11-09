@@ -1,6 +1,6 @@
 # purescript-polyform-batteries-core
 
-Base `Validator`, `Dual` and error structure plus some simple and general validators / duals (for `Number`, `Int` etc.). They provide the structure for the whole `polyform-batteries-*` ecosystem.
+Base `Validator`, `Dual` and error structure plus some simple and general validators / duals (for `Number`, `Int` etc.). This lib provides the structure for the whole `polyform-batteries-*` ecosystem.
 
 ## Objectives
 
