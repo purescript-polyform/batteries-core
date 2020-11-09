@@ -1,10 +1,6 @@
-# polyform-batteries
+# purescript-polyform-batteries-core
 
-Set of useful validators which are built on top of `Validator` and `Dual` from _purescript-polyform_.
-
-## Dependencies
-
-Currently we use "batteries included" approach and use _decimal.js_ and _moment.js_ as a part of this lib dependencies. Additionally we provide here basic validators for both urlencoded and json encoded data plus some extras like `Decimal`. It is possible that in the future we split this into smaller libs.
+Base `Validator`, `Dual` and error structure plus some simple and general validators / duals (for `Number`, `Int` etc.). They provide the structure for the whole `polyform-batteries-*` ecosystem.
 
 ## Objectives
 
