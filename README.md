@@ -1,4 +1,4 @@
-# purescript-polyform-batteries
+# polyform-batteries
 
 Set of useful validators which are built on top of `Validator` and `Dual` from _purescript-polyform_.
 
