@@ -1,25 +1,26 @@
 {
-    "name": "purescript-polyform-validators",
-    "license": [
-        "BSD-3-Clause"
-    ],
-    "repository": {
-        "type": "git",
-        "url": "https://github.com/lambdaterms/purescript-polyform-validators.git"
-    },
-    "ignore": [
-        "**/.*",
-        "node_modules",
-        "bower_components",
-        "output"
-    ],
-    "dependencies": {
-        "purescript-argonaut": "^v6.0.0",
-        "purescript-debug": "^v4.0.0",
-        "purescript-numbers": "^v7.0.0",
-        "purescript-polyform": "^v0.8.2",
-        "purescript-prelude": "^v4.1.1",
-        "purescript-record-extra": "^v3.0.1",
-        "purescript-test-unit": "^v15.0.0"
-    }
+  "name": "purescript-polyform-batteries",
+  "license": [
+    "BSD-3-Clause"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lambdaterms/purescript-polyform-batteries.git"
+  },
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "output"
+  ],
+  "dependencies": {
+    "purescript-argonaut": "^v6.0.0",
+    "purescript-debug": "^v4.0.0",
+    "purescript-numbers": "^v7.0.0",
+    "purescript-polyform": "^v0.8.2",
+    "purescript-prelude": "^v4.1.1",
+    "purescript-record-extra": "^v3.0.1",
+    "purescript-test-unit": "^v15.0.0",
+    "purescript-form-urlencoded": "^5.0.0"
+  }
 }
