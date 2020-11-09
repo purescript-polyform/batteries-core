@@ -1,4 +1,4 @@
-module Polyform.Batteries.Messages.Int where
+module Polyform.Batteries.Int.Messages where
 
 import Prelude
 import Polyform.Batteries.Int (IntExpected)

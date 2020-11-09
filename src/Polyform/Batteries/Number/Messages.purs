@@ -1,4 +1,4 @@
-module Polyform.Batteries.Messages.Number where
+module Polyform.Batteries.Number.Messages where
 
 import Polyform.Batteries.Eq.Validators (NotEqualToErr)
 import Polyform.Batteries.Generic.Ord.Validators (NotGreaterThanErr, NotInRangeErr, NotSmallerThanErr)

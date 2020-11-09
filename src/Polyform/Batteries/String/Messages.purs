@@ -1,4 +1,4 @@
-module Polyform.Batteries.Messages.String where
+module Polyform.Batteries.String.Messages where
 
 import Prelude
 import Polyform.Batteries.Eq.Validators (NotEqualToErr)
