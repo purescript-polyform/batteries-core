@@ -21,7 +21,7 @@ type InvalidEnumIndex e
 -- | If the output type is clear in your given context you can
 -- | use `validator'` and skip this `Proxy a` altogether.
 validator ∷ ∀ a err m. Applicative m ⇒ BoundedEnum a ⇒ Proxy a → Validator m (InvalidEnumIndex + err) Int a
-validator _ = Validator.liftFnMaybe (Batteries.error _invalidEnumIndex) (toEnum ∷ Int → Maybe a)
+validator _ = Validator.liftFnMaybe (Batteries.error _invalidEnumIndex (append "Invalid enum index: " <<< show)) (toEnum ∷ Int → Maybe a)
 
 -- | If you have clearly typed output passing in a `Proxy a` is redundant.
 validator' ∷ ∀ a err m. Applicative m ⇒ BoundedEnum a ⇒ Validator m (InvalidEnumIndex + err) Int a

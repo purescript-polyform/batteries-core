@@ -1,6 +1,7 @@
 module Polyform.Batteries.Generic.Monoid.Validators where
 
 import Prelude
+
 import Polyform.Batteries (Validator, error) as Batteries
 import Polyform.Validator (check) as Validator
 import Prim.Row (class Cons) as Row
@@ -14,8 +15,9 @@ isEmpty ∷
   Monoid a ⇒
   Applicative m ⇒
   SProxy l →
+  (a → String) →
   Batteries.Validator m err' a a
-isEmpty l = Validator.check (Batteries.error l) (_ == mempty)
+isEmpty l msg = Validator.check (Batteries.error l msg) (_ == mempty)
 
 isNotEmpty ∷
   ∀ a err err' l m.
@@ -25,5 +27,6 @@ isNotEmpty ∷
   Eq a ⇒
   Applicative m ⇒
   SProxy l →
+  (a → String) →
   Batteries.Validator m err' a a
-isNotEmpty l = Validator.check (const $ Batteries.error l unit) (_ /= mempty)
+isNotEmpty l msg = Validator.check (\e → Batteries.error l (const (msg e)) unit) (_ /= mempty)

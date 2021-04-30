@@ -19,7 +19,7 @@ type NumberExpected e
 -- | module and use `purescript-formatters`
 -- | API there.
 validator ∷ ∀ e m. Monad m ⇒ Batteries.Validator m (NumberExpected + e) String Number
-validator = Validator.liftFnMaybe (Batteries.error _numberExpected) Number.fromString
+validator = Validator.liftFnMaybe (Batteries.error _numberExpected $ append "Expecting a number but got: ") Number.fromString
 
 dual ∷ ∀ e m. Monad m ⇒ Maybe Number.Format.Format → Batteries.Dual m (NumberExpected + e) String Number
 dual format =

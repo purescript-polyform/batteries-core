@@ -89,7 +89,8 @@ validator ∷
   Applicative m ⇒
   Formatting →
   Batteries.Validator m ( decimal ∷ String | e ) String Decimal
-validator (Formatting { parse: p }) = Validator.liftFnMaybe (Batteries.error _decimal) p
+validator (Formatting { parse: p }) = Validator.liftFnMaybe
+  (Batteries.error _decimal $ append "Expecting a decimal number got: ") p
 
 dual ∷
   ∀ e m.

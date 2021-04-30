@@ -14,7 +14,7 @@ type IntExpected e
   = ( intExpected ∷ String | e )
 
 validator ∷ ∀ e m. Applicative m ⇒ Batteries.Validator m (IntExpected + e) String Int
-validator = Validator.liftFnMaybe (Batteries.error _intExpected) Int.fromString
+validator = Validator.liftFnMaybe (Batteries.error _intExpected $ append "Expecting a string but got: ") Int.fromString
 
 dual ∷ ∀ e m. Applicative m ⇒ Batteries.Dual m (IntExpected + e) String Int
 dual = Dual.dual validator (pure <<< show)
