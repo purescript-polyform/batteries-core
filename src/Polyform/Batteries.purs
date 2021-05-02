@@ -1,7 +1,6 @@
 module Polyform.Batteries
   ( error
   , Dual
-  , Error
   , Errors(..)
   , invalid
   , Msg
@@ -21,22 +20,19 @@ import Polyform.Validator.Dual (Dual) as Polyform.Validator.Dual
 import Prim.Row (class Cons) as Row
 import Type.Prelude (class IsSymbol, SProxy)
 
-type Msg
-  = Data.Lazy String
-
 -- | It seems that better usability is with this embeded default
 -- | error info than with a set of printers which an end user
 -- | has to compose with their own renderers.
 -- |
 -- | Maybe this pattern is more general in the I18N context
 -- | and this should be renamed to `Msg` and moved outside?
-type Error err
-  = { msg ∷ Msg, info ∷ Variant err }
+type Msg msg
+  = { msg ∷ Data.Lazy String, info ∷ Variant msg }
 
 -- | Do we want to migrate to this kind of error repr
 --   = Array ({ msg ∷ String, info ∷ Variant errs })
 type Errors err
-  = Array (Error err)
+  = Array (Msg err)
 
 type Validator m errs i o
   = Polyform.Validator m (Errors errs) i o
