@@ -14,13 +14,25 @@
     "output"
   ],
   "dependencies": {
-    "purescript-argonaut": "^v6.0.0",
-    "purescript-debug": "^v4.0.0",
-    "purescript-numbers": "^v7.0.0",
-    "purescript-polyform": "^v0.8.2",
-    "purescript-prelude": "^v4.1.1",
-    "purescript-record-extra": "^v3.0.1",
-    "purescript-test-unit": "^v15.0.0",
-    "purescript-form-urlencoded": "^5.0.0"
+    "purescript-arrays": "^6.0.1",
+    "purescript-decimals": "^6.0.0",
+    "purescript-effect": "^3.0.0",
+    "purescript-enums": "^5.0.0",
+    "purescript-integers": "^5.0.0",
+    "purescript-lazy": "^5.0.0",
+    "purescript-maybe": "^5.0.0",
+    "purescript-numbers": "^8.0.0",
+    "purescript-partial": "^3.0.0",
+    "purescript-polyform": "^0.8.2",
+    "purescript-prelude": "^5.0.0",
+    "purescript-strings": "^5.0.0",
+    "purescript-typelevel-prelude": "^6.0.0",
+    "purescript-validation": "^5.0.0",
+    "purescript-variant": "^7.0.2"
+  },
+  "devDependencies": {
+    "purescript-quickcheck": "^7.1.0",
+    "purescript-psci-support": "^5.0.0",
+    "purescript-test-unit": "^16.0.0",
   }
 }
