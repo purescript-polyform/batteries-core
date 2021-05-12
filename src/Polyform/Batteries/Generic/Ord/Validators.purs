@@ -38,6 +38,7 @@ smallerThan ∷
   Batteries.Validator m err' a a
 smallerThan l msg max = Validator.check (Batteries.error l msg <<< { max, value: _ }) (_ < max)
 
+type RangeRow :: Type -> Row Type -> Row Type
 type RangeRow a r
   = ( max ∷ a, min ∷ a | r )
 
