@@ -7,11 +7,10 @@ import Polyform.Batteries (Validator, Dual)
 import Polyform.Batteries (error) as Batteries
 import Polyform.Dual (dual) as Dual
 import Polyform.Validator (liftFnMaybe) as Validator
-import Type.Prelude (SProxy(..))
 import Type.Proxy (Proxy(..))
 import Type.Row (type (+))
 
-_invalidEnumIndex = SProxy ∷ SProxy "invalidEnumIndex"
+_invalidEnumIndex = Proxy ∷ Proxy "invalidEnumIndex"
 
 type InvalidEnumIndex e
   = ( invalidEnumIndex ∷ Int | e )

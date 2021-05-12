@@ -6,7 +6,8 @@ import Data.Array (elem) as Array
 import Polyform.Batteries (Validator, error) as Batteries
 import Polyform.Validator (check) as Validator
 import Prim.Row (class Cons) as Row
-import Type.Prelude (class IsSymbol, SProxy)
+import Type.Prelude (class IsSymbol)
+import Type.Proxy (Proxy)
 
 type NotEqualToErr a
   = { expected ∷ a, got ∷ a }
@@ -17,7 +18,7 @@ equalTo ∷
   IsSymbol l ⇒
   Eq a ⇒
   Applicative m ⇒
-  SProxy l →
+  Proxy l →
   (NotEqualToErr a → String) →
   a →
   Batteries.Validator m err' a a
@@ -29,7 +30,7 @@ differentThan ∷
   IsSymbol l ⇒
   Eq a ⇒
   Applicative m ⇒
-  SProxy l →
+  Proxy l →
   (a → String) →
   a →
   Batteries.Validator m err' a a
@@ -44,7 +45,7 @@ oneOf ∷
   IsSymbol l ⇒
   Eq a ⇒
   Applicative m ⇒
-  SProxy l →
+  Proxy l →
   (NotOneOfErr a → String) →
   Array a →
   Batteries.Validator m err' a a
@@ -59,9 +60,8 @@ missingFrom ∷
   IsSymbol l ⇒
   Eq a ⇒
   Applicative m ⇒
-  SProxy l →
+  Proxy l →
   (NotMissingFromErr a → String) →
   Array a →
   Batteries.Validator m err' a a
 missingFrom l msg arr = Validator.check (Batteries.error l msg <<< { unexpected: arr, got: _ }) (not <<< flip Array.elem arr)
-

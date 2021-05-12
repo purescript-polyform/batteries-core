@@ -47,16 +47,17 @@ main =
 -- import Test.Unit (suite) as Test.Unit
 -- import Test.Unit.Assert (assert, equal)
 -- import Test.Unit.Main (runTest)
--- import Type.Prelude (SProxy(..), reflectSymbol)
+-- import Type.Prelude (reflectSymbol)
+-- import Type.Proxy (Proxy(..))
 -- import Type.Row (type (+))
 -- import Unsafe.Coerce (unsafeCoerce)
--- 
+--
 -- d ∷ ∀ e m. Monad m ⇒ ObjectDual m e { foo ∷ Int, bar ∷ String, baz ∷ Number }
 -- d = Dual $ { foo: _, bar: _, baz: _ }
---   <$> (SProxy ∷ SProxy "foo") := Dual.Json.int
---   <*> (SProxy ∷ SProxy "bar") := Dual.Json.string
---   <*> (SProxy ∷ SProxy "baz") := Dual.Json.number
--- 
+--   <$> (Proxy ∷ Proxy "foo") := Dual.Json.int
+--   <*> (Proxy ∷ Proxy "bar") := Dual.Json.string
+--   <*> (Proxy ∷ Proxy "baz") := Dual.Json.number
+--
 -- obj ∷ ∀ e. JsonDual
 --   Aff
 --   (JsonError + e)
@@ -65,61 +66,61 @@ main =
 --   , baz ∷ Number
 --   }
 -- obj = Dual.Json.object >>> d
--- 
+--
 -- -- dualUrlEncoded ∷ ∀ e m. Monad m ⇒ Dual.Validators.UrlEncoded.Dual m e { foo ∷ Int, bar ∷ String, baz ∷ Number }
 -- dualUrlEncoded = (Dual $ { foo: _, bar: _, baz: _ }
 --   <$> _.foo ~ Dual.Validators.UrlEncoded.field "foo" Dual.Validators.UrlEncoded.int
 --   <*> _.bar ~ Dual.Validators.UrlEncoded.field "bar" Dual.Validators.UrlEncoded.string
 --   <*> _.baz ~ Dual.Validators.UrlEncoded.field "baz" Dual.Validators.UrlEncoded.number)
 --   <<< Dual.Validators.UrlEncoded.query { replacePlus: false }
--- 
+--
 -- type SumV = Variant (s ∷ String, i ∷ Int, b ∷ Boolean )
--- _s = SProxy ∷ SProxy "s"
--- _i = SProxy ∷ SProxy "i"
--- _a = SProxy ∷ SProxy "a"
--- _b = SProxy ∷ SProxy "b"
--- _c = SProxy ∷ SProxy "c"
--- 
--- 
+-- _s = Proxy ∷ Proxy "s"
+-- _i = Proxy ∷ Proxy "i"
+-- _a = Proxy ∷ Proxy "a"
+-- _b = Proxy ∷ Proxy "b"
+-- _c = Proxy ∷ Proxy "c"
+--
+--
 -- sumVariant = ({ t: _, v: _ } <$> Json.field "tag" Json.string <*> Json.field "value" Json.string) >>> (hoistFnMV $ case _ of
 --   { t: "s", v } →  runValidator (Json.json >>> Json.string >>> hoistFn (inj _s)) v
 --   { t: "i", v } → runValidator (Json.json >>> Json.int >>> hoistFn (inj _i)) v
 --   { t: "b", v } → runValidator (Json.json >>> Json.boolean >>> hoistFn (inj _b)) v)
--- 
--- 
+--
+--
 -- sumVariantDual ∷ ∀ e. JsonDual Aff (Json.JsonDecodingError e) SumV
 -- sumVariantDual = Dual.object >>> tagWithValue >>> valueDual
 --   where
 --     tagWithValue = Dual $ { t: _, v: _ }
 --       <$> _.t ~ Dual.Json.objectField "tag" Dual.Json.string
 --       <*> _.v ~ Dual.Json.objectField "value" identity
--- 
+--
 --     parser = hoistFnMV $ case _ of
 --       { t: "s", v } → runValidator (Json.string >>> hoistFn (inj _s)) v
 --       { t: "i", v } → runValidator (Json.int >>> hoistFn (inj _i)) v
 --       { t: "b", v } → runValidator (Json.boolean >>> hoistFn (inj _b)) v
 --       { t, v } → pure $ Json.failure
 --         ("Invalid tag: " <> t <> " with value: " <> (stringify v) )
--- 
+--
 --     serializer = match
 --       { s: \s → { t: "s", v: Argounaut.fromString s }
 --       , i: \i → { t: "i", v: Argonaut.fromNumber <<< toNumber $ i }
 --       , b: \b → { t: "b", v: Argonaut.fromBoolean $ b }
 --       }
--- 
+--
 --     valueDual = dual { parser, serializer }
--- 
+--
 -- data Sum = S String | I Int | B Boolean
 -- derive instance genericSum ∷ Generic Sum _
 -- derive instance eqSum ∷ Eq Sum
 -- instance showSum ∷ Show Sum where
 --   show = genericShow
--- 
+--
 -- data Single = Single String
 -- derive instance genericSingle ∷ Generic Single _
--- 
+--
 -- field v = const v unit
--- 
+--
 -- sum' ∷
 --   ∀ e m.
 --   Monad m ⇒
@@ -129,7 +130,7 @@ main =
 --   , "I": identity Dual.Json.int
 --   , "B": identity Dual.Json.boolean
 --   }
--- 
+--
 -- genericVariantDual ∷
 --   ∀ e i m.
 --   Monad m ⇒
@@ -141,34 +142,34 @@ main =
 --   , "d": identity Dual.Json.string
 --   , "e": identity Dual.Json.int
 --   }
--- 
+--
 -- -- sum ∷ ∀ m e. Monad m ⇒ Json.Validator m e (Object.Object Json)
 -- sum = ({ t: _, v: _ } <$> Json.field "tag" Json.string <*> Json.field "value" Json.string) >>> (hoistFnMV $ case _ of
 --   { t: "S", v } →  runValidator (Json.json >>> Json.string >>> hoistFn S) v
 --   { t: "I", v } → runValidator (Json.json >>> Json.int >>> hoistFn I) v
 --   { t: "B", v } → runValidator (Json.json >>> Json.boolean >>> hoistFn B) v)
--- 
+--
 -- sumDual ∷ ∀ e. JsonDual Aff (Json.JsonDecodingError e) Sum
 -- sumDual = Dual.object >>> tagWithValue >>> valueDual
 --   where
 --     tagWithValue = Dual $ { t: _, v: _ }
 --       <$> _.t ~ Dual.Json.objectField "tag" Dual.Json.string
 --       <*> _.v ~ Dual.Json.objectField "value" identity
--- 
+--
 --     parser = hoistFnMV $ case _ of
 --       { t: "S", v } → runValidator (Json.string >>> hoistFn S) v
 --       { t: "I", v } → runValidator (Json.int >>> hoistFn I) v
 --       { t: "B", v } → runValidator (Json.boolean >>> hoistFn B) v
 --       { t, v } → pure $ Json.failure
 --         ("Invalid tag: " <> t <> " with value: " <> (stringify v) )
--- 
+--
 --     serializer = case _ of
 --       S s → { t: "S", v: Argounaut.fromString s }
 --       I i → { t: "I", v: Argonaut.fromNumber <<< toNumber $ i }
 --       B b → { t: "B", v: Argonaut.fromBoolean $ b }
--- 
+--
 --     valueDual = dual { parser, serializer }
--- 
+--
 -- main ∷ Effect Unit
 -- main = runTest $ do
 --   Test.Unit.suite "Validators.Urlencoded" $ do
@@ -190,7 +191,7 @@ main =
 --         (const $ failure "Validation failed")
 --         (_ `equal` (Map.fromFoldable [Tuple "arr" ["v1", "v2", "v3"]]))
 --         x
--- 
+--
 --     test "decodes fields" $ do
 --       let
 --         fields = { string: _, int: _, number: _, array: _, boolean: _ }
@@ -199,16 +200,16 @@ main =
 --           <*> UrlEncoded.field "number" UrlEncoded.number
 --           <*> UrlEncoded.field "array" UrlEncoded.array
 --           <*> UrlEncoded.field "boolean" UrlEncoded.boolean
--- 
+--
 --       x ← runValidator
 --         (UrlEncoded.query { replacePlus: true } >>> fields)
 --         "string=some+text&int=8&number=0.1&array=v1&array=v2&array=v3&boolean=on"
--- 
+--
 --       unV
 --         (const $ failure "Validation failed")
 --         (_ `equal` {string: "some text", int: 8, number: 0.1, array: ["v1", "v2", "v3"], boolean: true})
 --         x
--- 
+--
 --   Test.Unit.suite "Dual" $ do
 --     Test.Unit.suite "Json" $ do
 --       test "serialization / validation" $ do
@@ -224,7 +225,7 @@ main =
 --           (const $ failure "Validation failed")
 --           (_ `equal` input)
 --           parsed
--- 
+--
 --       test "serialization / validation of an example sum" $ do
 --         let
 --           input = B true
@@ -238,7 +239,7 @@ main =
 --           (const $ failure "Validation failed")
 --           (_ `equal` input)
 --           parsed
--- 
+--
 --       test "serialization / validation of an example variant" $ do
 --         let
 --           input = inj _b true
@@ -252,7 +253,7 @@ main =
 --           (const $ failure "Validation failed")
 --           (_ `equal` input)
 --           parsed
--- 
+--
 --       test "serialization / validation of generic duals for variants" $ do
 --         let
 --           input = inj _b "test"
@@ -271,7 +272,7 @@ main =
 --           (const $ failure "Validation failed")
 --           (_ `equal` input)
 --           parsed
--- 
+--
 --     Test.Unit.suite "Urlencoded" $ do
 --       test "serialization / validation" $ do
 --         let
