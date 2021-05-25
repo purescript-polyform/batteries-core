@@ -8,10 +8,10 @@ import Polyform.Batteries.Generic.Eq.Validators (differentThan, equalTo, missing
 import Polyform.Batteries.Generic.Messages (emptyExpected, notDifferentThan, notEmptyExpected, notEqualTo, notGreaterThan, notInRange, notMissingFrom, notOneOf, notSmallerThan) as Generic.Messages
 import Polyform.Batteries.Generic.Monoid.Validators (isEmpty, isNotEmpty) as Generic.Monoid.Validators
 import Polyform.Batteries.Generic.Ord.Validators (NotGreaterThanErr, NotInRangeErr, NotSmallerThanErr, Range, greaterThan, inRange, smallerThan) as Generic.Ord.Validators
-import Type.Prelude (SProxy(..))
+import Type.Proxy (Proxy(..))
 import Type.Row (type (+))
 
-_notGreaterThan = SProxy ∷ SProxy "stringNotGreaterThan"
+_notGreaterThan = Proxy ∷ Proxy "stringNotGreaterThan"
 
 type NotGreaterThan e
   = ( stringNotGreaterThan ∷ Generic.Ord.Validators.NotGreaterThanErr String | e )
@@ -23,7 +23,7 @@ greaterThan ∷
   Batteries.Validator m (NotGreaterThan + e) String String
 greaterThan = Generic.Ord.Validators.greaterThan _notGreaterThan Generic.Messages.notGreaterThan
 
-_notSmallerThan = SProxy ∷ SProxy "stringNotSmallerThan"
+_notSmallerThan = Proxy ∷ Proxy "stringNotSmallerThan"
 
 type NotSmallerThan e
   = ( stringNotSmallerThan ∷ Generic.Ord.Validators.NotSmallerThanErr String | e )
@@ -35,7 +35,7 @@ smallerThan ∷
   Batteries.Validator m (NotSmallerThan + e) String String
 smallerThan = Generic.Ord.Validators.smallerThan _notSmallerThan Generic.Messages.notSmallerThan
 
-_notInRange = SProxy ∷ SProxy "stringNotInRange"
+_notInRange = Proxy ∷ Proxy "stringNotInRange"
 
 type NotInRange e
   = ( stringNotInRange ∷ Generic.Ord.Validators.NotInRangeErr String | e )
@@ -47,7 +47,7 @@ inRange ∷
   Batteries.Validator m (NotInRange + e) String String
 inRange = Generic.Ord.Validators.inRange _notInRange Generic.Messages.notInRange
 
-_notEqualTo = SProxy ∷ SProxy "stringNotEqualTo"
+_notEqualTo = Proxy ∷ Proxy "stringNotEqualTo"
 
 type NotEqualTo e
   = ( stringNotEqualTo ∷ NotEqualToErr String | e )
@@ -62,7 +62,7 @@ equalTo = Generic.Eq.Validators.equalTo _notEqualTo Generic.Messages.notEqualTo
 type NotDifferentThan e
   = ( stringNotDifferentThan ∷ String | e )
 
-_notDifferentThan = SProxy ∷ SProxy "stringNotDifferentThan"
+_notDifferentThan = Proxy ∷ Proxy "stringNotDifferentThan"
 
 differentThan ∷
   ∀ m e.
@@ -74,7 +74,7 @@ differentThan = Generic.Eq.Validators.differentThan _notDifferentThan Generic.Me
 type NotOneOf e
   = ( stringNotOneOf ∷ NotOneOfErr String | e )
 
-_notOneOf = SProxy ∷ SProxy "stringNotOneOf"
+_notOneOf = Proxy ∷ Proxy "stringNotOneOf"
 
 oneOf ∷
   ∀ m e.
@@ -86,7 +86,7 @@ oneOf = Generic.Eq.Validators.oneOf _notOneOf Generic.Messages.notOneOf
 type NotMissingFrom e
   = ( stringNotMissingFrom ∷ NotMissingFromErr String | e )
 
-_notMissingFrom = SProxy ∷ SProxy "stringNotMissingFrom"
+_notMissingFrom = Proxy ∷ Proxy "stringNotMissingFrom"
 
 missingFrom ∷
   ∀ m e.
@@ -98,7 +98,7 @@ missingFrom = Generic.Eq.Validators.missingFrom _notMissingFrom Generic.Messages
 type NotEmptyExpected e
   = ( stringNotEmptyExpected ∷ Unit | e )
 
-_nonEmptyExpected = SProxy ∷ SProxy "stringNotEmptyExpected"
+_nonEmptyExpected = Proxy ∷ Proxy "stringNotEmptyExpected"
 
 isNotEmpty ∷
   ∀ m e.
@@ -109,7 +109,7 @@ isNotEmpty = Generic.Monoid.Validators.isNotEmpty _nonEmptyExpected Generic.Mess
 type EmptyExpected e
   = ( stringEmptyExpected ∷ String | e )
 
-_emptyExpected = SProxy ∷ SProxy "stringEmptyExpected"
+_emptyExpected = Proxy ∷ Proxy "stringEmptyExpected"
 
 isEmpty ∷
   ∀ m e.

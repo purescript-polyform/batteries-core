@@ -20,7 +20,8 @@ import Data.Variant (inj) as Variant
 import Polyform.Validator (Validator) as Polyform
 import Polyform.Validator.Dual (Dual) as Polyform.Validator.Dual
 import Prim.Row (class Cons) as Row
-import Type.Prelude (class IsSymbol, SProxy)
+import Type.Prelude (class IsSymbol)
+import Type.Proxy (Proxy)
 
 -- | It seems that better usability is with this embeded default
 -- | error info than with a set of printers which an end user
@@ -31,7 +32,7 @@ import Type.Prelude (class IsSymbol, SProxy)
 type Msg msg
   = { msg ∷ Data.Lazy String, info ∷ Variant msg }
 
-msg ∷ ∀ info l msg_ msg. IsSymbol l ⇒ Row.Cons l info msg_ msg ⇒ Data.Lazy String → SProxy l → info → Msg msg
+msg ∷ ∀ info l msg_ msg. IsSymbol l ⇒ Row.Cons l info msg_ msg ⇒ Data.Lazy String → Proxy l → info → Msg msg
 msg m l i = { msg: m, info: Variant.inj l i }
 
 msg' ::
@@ -39,7 +40,7 @@ msg' ::
   IsSymbol t8 ⇒
   Row.Cons t8 t9 t7 t6 ⇒
   String →
-  SProxy t8 →
+  Proxy t8 →
   t9 →
   { info ∷ Variant t6
   , msg ∷ Data.Lazy String
@@ -58,8 +59,8 @@ type Dual m errs i o
   = Polyform.Validator.Dual.Dual m (Errors errs) i o
 
 -- | Handy shortcuts to quickly build an error or the whole failure result
-error ∷ ∀ e errs l t. Row.Cons l e t errs ⇒ IsSymbol l ⇒ SProxy l → (e → String) → e → Errors errs
+error ∷ ∀ e errs l t. Row.Cons l e t errs ⇒ IsSymbol l ⇒ Proxy l → (e → String) → e → Errors errs
 error l prt = Array.singleton <<< \e → msg (defer \_ → prt e) l e
 
-invalid ∷ ∀ e errs l o t. Row.Cons l e t errs ⇒ IsSymbol l ⇒ SProxy l → (e → String) → e → V (Errors errs) o
+invalid ∷ ∀ e errs l o t. Row.Cons l e t errs ⇒ IsSymbol l ⇒ Proxy l → (e → String) → e → V (Errors errs) o
 invalid l prt = Validation.invalid <<< error l prt

@@ -7,10 +7,10 @@ import Data.Number.Format (Format, toString, toStringWith) as Number.Format
 import Polyform.Batteries (Validator, Dual, error) as Batteries
 import Polyform.Dual (dual) as Dual
 import Polyform.Validator (liftFnMaybe) as Validator
-import Type.Prelude (SProxy(..))
 import Type.Row (type (+))
+import Type.Proxy (Proxy(..))
 
-_numberExpected = SProxy ∷ SProxy "numberExpected"
+_numberExpected = Proxy ∷ Proxy "numberExpected"
 
 type NumberExpected e
   = ( numberExpected ∷ String | e )

@@ -5,10 +5,10 @@ import Data.Int (fromString) as Int
 import Polyform.Batteries (Validator, Dual, error) as Batteries
 import Polyform.Dual (dual) as Dual
 import Polyform.Validator (liftFnMaybe) as Validator
-import Type.Prelude (SProxy(..))
 import Type.Row (type (+))
+import Type.Proxy (Proxy(..))
 
-_intExpected = SProxy ∷ SProxy "intExpected"
+_intExpected = Proxy ∷ Proxy "intExpected"
 
 type IntExpected e
   = ( intExpected ∷ String | e )

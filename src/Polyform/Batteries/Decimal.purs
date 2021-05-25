@@ -15,7 +15,7 @@ import Polyform.Data.String.Regex (escape) as Regex
 import Polyform.Dual (dual) as Dual
 import Polyform.Validator (liftFnMaybe) as Validator
 import Polyform.Batteries (error, Validator, Dual) as Batteries
-import Type.Prelude (SProxy(..))
+import Type.Proxy (Proxy(..))
 
 newtype Formatting
   = Formatting
@@ -76,7 +76,7 @@ formatting config =
     in
       format <<< Decimal.toString
 
-_decimal = SProxy ∷ SProxy "decimal"
+_decimal = Proxy ∷ Proxy "decimal"
 
 parse ∷ Formatting → String → Maybe Decimal
 parse (Formatting fmt) = fmt.parse

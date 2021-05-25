@@ -5,8 +5,9 @@ import Prelude
 import Polyform.Batteries (Validator, error) as Batteries
 import Polyform.Validator (check) as Validator
 import Prim.Row (class Cons) as Row
-import Type.Prelude (class IsSymbol, SProxy)
+import Type.Prelude (class IsSymbol)
 import Type.Row (type (+))
+import Type.Proxy (Proxy)
 
 type NotGreaterThanErr a
   = { value ∷ a, min ∷ a }
@@ -17,7 +18,7 @@ greaterThan ∷
   IsSymbol l ⇒
   Ord a ⇒
   Applicative m ⇒
-  SProxy l →
+  Proxy l →
   (NotGreaterThanErr a → String) →
   a →
   Batteries.Validator m err' a a
@@ -32,12 +33,13 @@ smallerThan ∷
   IsSymbol l ⇒
   Ord a ⇒
   Applicative m ⇒
-  SProxy l →
+  Proxy l →
   (NotSmallerThanErr a → String) →
   a →
   Batteries.Validator m err' a a
 smallerThan l msg max = Validator.check (Batteries.error l msg <<< { max, value: _ }) (_ < max)
 
+type RangeRow :: Type -> Row Type -> Row Type
 type RangeRow a r
   = ( max ∷ a, min ∷ a | r )
 
@@ -53,7 +55,7 @@ inRange ∷
   IsSymbol l ⇒
   Ord a ⇒
   Applicative m ⇒
-  SProxy l →
+  Proxy l →
   (NotInRangeErr a → String) →
   Range a →
   Batteries.Validator m err' a a
