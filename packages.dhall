@@ -31,6 +31,6 @@ in  upstream
           , "validation"
           , "variant"
           ]
-        , repo = "https://github.com/JordanMartinez/purescript-polyform.git"
-        , version = "updateTov0.14.1"
+        , repo = "https://github.com/purescript-polyform/polyform.git"
+        , version = "v0.9.0"
         }
