@@ -1,8 +1,5 @@
-{-
-Welcome to a Spago project!
-You can edit this file as you like.
--}
-{ name = "polyform-batteries"
+{ name = "polyform-batteries-core"
+, license = "BSD-3-Clause"
 , dependencies =
   [ "arrays"
   , "decimals"
@@ -24,5 +21,6 @@ You can edit this file as you like.
   , "variant"
   ]
 , packages = ./packages.dhall
+, repository = "https://github.com/purescript-polyform/batteries-core.git"
 , sources = [ "src/**/*.purs", "test/**/*.purs" ]
 }
