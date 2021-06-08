@@ -1,6 +1,6 @@
 {
-  "name": "purescript-polyform-validators",
-  "version": "0.0.1",
+  "name": "purescript-polyform-batteries-core",
+  "version": "0.2.0",
   "devDependencies": {
     "pscid": "^2.9.0",
     "pulp": "^15.0.0",
