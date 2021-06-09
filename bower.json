@@ -1,11 +1,11 @@
 {
-  "name": "purescript-polyform-batteries",
+  "name": "purescript-polyform-batteries-core",
   "license": [
     "BSD-3-Clause"
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/lambdaterms/purescript-polyform-batteries.git"
+    "url": "https://github.com/purescript-polyform/batteries-core.git"
   },
   "ignore": [
     "**/.*",
