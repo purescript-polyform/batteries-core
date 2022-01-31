@@ -17,6 +17,7 @@
   , "strings"
   , "test-unit"
   , "typelevel-prelude"
+  , "unsafe-coerce"
   , "validation"
   , "variant"
   ]

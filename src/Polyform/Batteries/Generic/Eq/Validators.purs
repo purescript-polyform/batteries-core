@@ -3,7 +3,7 @@ module Polyform.Batteries.Generic.Eq.Validators where
 import Prelude
 
 import Data.Array (elem) as Array
-import Polyform.Batteries (Validator, error) as Batteries
+import Polyform.Batteries (Validator', error) as Batteries
 import Polyform.Validator (check) as Validator
 import Prim.Row (class Cons) as Row
 import Type.Prelude (class IsSymbol)
@@ -21,7 +21,7 @@ equalTo ∷
   Proxy l →
   (NotEqualToErr a → String) →
   a →
-  Batteries.Validator m err' a a
+  Batteries.Validator' m err' a a
 equalTo l msg expected = Validator.check (Batteries.error l msg <<< { expected, got: _ }) (_ == expected)
 
 differentThan ∷
@@ -33,7 +33,7 @@ differentThan ∷
   Proxy l →
   (a → String) →
   a →
-  Batteries.Validator m err' a a
+  Batteries.Validator' m err' a a
 differentThan l msg a = Validator.check (const $ Batteries.error l msg a) (_ /= a)
 
 type NotOneOfErr a
@@ -48,7 +48,7 @@ oneOf ∷
   Proxy l →
   (NotOneOfErr a → String) →
   Array a →
-  Batteries.Validator m err' a a
+  Batteries.Validator' m err' a a
 oneOf l msg arr = Validator.check (Batteries.error l msg <<< { expected: arr, got: _ }) (_ `Array.elem` arr)
 
 type NotMissingFromErr a
@@ -63,5 +63,5 @@ missingFrom ∷
   Proxy l →
   (NotMissingFromErr a → String) →
   Array a →
-  Batteries.Validator m err' a a
+  Batteries.Validator' m err' a a
 missingFrom l msg arr = Validator.check (Batteries.error l msg <<< { unexpected: arr, got: _ }) (not <<< flip Array.elem arr)

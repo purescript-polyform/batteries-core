@@ -1,6 +1,7 @@
 module Polyform.Batteries.Decimal where
 
 import Prelude
+
 import Data.Array (catMaybes, uncons) as Array
 import Data.Array.NonEmpty (toArray) as NonEmptyArray
 import Data.Decimal (Decimal)
@@ -10,11 +11,11 @@ import Data.String (Pattern(..), joinWith, split) as String
 import Data.String.Regex (match, replace) as Regex
 import Data.String.Regex.Flags (global) as Regex.Flags
 import Data.String.Regex.Unsafe (unsafeRegex)
+import Polyform.Batteries (Dual', Validator', error) as Batteries
 import Polyform.Data.String (reverseCodeUnits) as String
 import Polyform.Data.String.Regex (escape) as Regex
 import Polyform.Dual (dual) as Dual
 import Polyform.Validator (liftFnMaybe) as Validator
-import Polyform.Batteries (error, Validator, Dual) as Batteries
 import Type.Proxy (Proxy(..))
 
 newtype Formatting
@@ -88,7 +89,7 @@ validator ∷
   ∀ e m.
   Applicative m ⇒
   Formatting →
-  Batteries.Validator m ( decimal ∷ String | e ) String Decimal
+  Batteries.Validator' m ( decimal ∷ String | e ) String Decimal
 validator (Formatting { parse: p }) = Validator.liftFnMaybe
   (Batteries.error _decimal $ append "Expecting a decimal number got: ") p
 
@@ -96,7 +97,7 @@ dual ∷
   ∀ e m.
   Applicative m ⇒
   Formatting →
-  Batteries.Dual m ( decimal ∷ String | e ) String Decimal
+  Batteries.Dual' m ( decimal ∷ String | e ) String Decimal
 dual (fmt@(Formatting { print: p })) = Dual.dual (validator fmt) (p >>> pure)
 
 -- | Usually you want to push formatting context into the validator
@@ -106,7 +107,7 @@ dual (fmt@(Formatting { print: p })) = Dual.dual (validator fmt) (p >>> pure)
 -- | validatorReader
 -- |   ∷ ∀ ctx errs m polyformCtx
 -- |   . MonadAsk { polyform ∷ { decimal ∷ Formatting | polyformCtx } | ctx } m
--- |   ⇒ Batteries.Validator
+-- |   ⇒ Batteries.Validator'
 -- |     m
 -- |     ( decimal ∷ String | errs )
 -- |     String
