@@ -12,7 +12,6 @@
   , "partial"
   , "polyform"
   , "prelude"
-  , "psci-support"
   , "quickcheck"
   , "strings"
   , "test-unit"

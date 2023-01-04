@@ -9,6 +9,10 @@ module Polyform.Batteries
   , Msg
   , msg
   , msg'
+  , rawError
+  , _raw
+  , stringifyValidator
+  , stringifyDual
   , Validator
   , Validator'
   ) where
@@ -18,6 +22,7 @@ import Prelude
 import Data.Array (singleton) as Array
 import Data.Lazy (Lazy) as Data
 import Data.Lazy (defer)
+import Data.Lazy as Lazy
 import Data.Symbol (reflectSymbol)
 import Data.Validation.Semigroup (V)
 import Data.Validation.Semigroup (invalid) as Validation
@@ -25,9 +30,11 @@ import Data.Variant (Variant)
 import Data.Variant (inj) as Variant
 import Data.Variant.Internal (VariantRep(..))
 import Polyform.Validator (Validator) as Polyform
+import Polyform.Validator (lmapValidator)
 import Polyform.Validator.Dual (Dual) as Polyform.Validator.Dual
+import Polyform.Validator.Dual (lmapDual)
 import Prim.Row (class Cons) as Row
-import Type.Prelude (class IsSymbol)
+import Type.Prelude (class IsSymbol, Proxy(..))
 import Type.Proxy (Proxy)
 import Unsafe.Coerce (unsafeCoerce)
 
@@ -55,6 +62,14 @@ msg' ::
   }
 msg' m = msg (defer \_ → m)
 
+-- When you don't care about the semantic part of the error
+-- you can use this placeholder.
+_raw = Proxy :: Proxy "raw"
+
+rawError :: forall info. String -> Msg (raw :: Array String | info)
+rawError m = msg' m _raw [m]
+
+
 -- | Do we want to migrate to this kind of error repr
 --   = Array ({ msg ∷ String, info ∷ Variant errs })
 type Errors err
@@ -71,6 +86,12 @@ type Validator' m (errs :: Row Type) i o = Validator m (Msg errs) i o
 type Dual m errs i o = Polyform.Validator.Dual.Dual m (Errors errs) i o
 
 type Dual' m (errs :: Row Type) i o = Dual m (Msg errs) i o
+
+stringifyValidator ∷ ∀ m errs i o. Monad m ⇒ Validator' m errs i o → Validator m String i o
+stringifyValidator = lmapValidator (map (Lazy.force <<< _.msg))
+
+stringifyDual ∷ ∀ m errs i o. Monad m ⇒ Dual' m errs i o → Dual m String i o
+stringifyDual = lmapDual (map (Lazy.force <<< _.msg))
 
 -- | Handy shortcuts to quickly build an error or the whole failure result
 error ∷ ∀ e errs l t. Row.Cons l e t errs ⇒ IsSymbol l ⇒ Proxy l → (e → String) → e → Errors' errs
@@ -92,10 +113,10 @@ invalid l prt = Validation.invalid <<< error l prt
 -- | ```
 
 onErr
-  ∷ ∀ proxy sym info b infos_ infos
+  ∷ ∀ sym info b infos_ infos
   . Row.Cons sym info infos_ infos
   ⇒ IsSymbol sym
-  ⇒ proxy sym
+  ⇒ Proxy sym
   → ({ info :: info, msg :: Data.Lazy String } → b)
   → (Msg infos_ → b)
   → Msg infos

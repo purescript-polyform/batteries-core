@@ -3,7 +3,7 @@
 
 "use strict";
 
-exports.reverseCodeUnits = function(s) {
+export const reverseCodeUnits = function(s) {
   var i = s.length, result = "";
 
   while (i) {
